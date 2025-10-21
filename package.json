@@ -1,0 +1,31 @@
+{
+  "name": "flwins2-dev",
+  "version": "1.0.0",
+  "description": "Basic Node.js web application for Azure App Service",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "nodejs",
+    "express",
+    "azure",
+    "web-app"
+  ],
+  "author": "",
+  "license": "MIT"
+}
