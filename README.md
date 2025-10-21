@@ -1,6 +1,6 @@
-# FLWINS2 Development - Node.js Web Application
+# FL WINS - Florida Workforce Innovation Network System
 
-A basic Node.js web application built for Azure App Service deployment using Node.js 22 LTS runtime.
+A modern, responsive web application for Florida's Workforce Innovation Network System, built with Node.js and Express.js for deployment on Azure App Service.
 
 ## Features
 
