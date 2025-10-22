@@ -315,20 +315,49 @@
 .flwins-partner-logo {
     margin-bottom: var(--flwins-space-6);
     height: 80px;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--flwins-space-2);
+    padding: var(--flwins-space-3);
+    background-color: rgba(255, 255, 255, 0.5);
+    border-radius: var(--flwins-radius-md);
 }
 
 .flwins-partner-logo img {
-    max-height: 60px;
-    max-width: 100%;
+    max-height: 50px;
+    max-width: 180px;
     width: auto;
     height: auto;
     object-fit: contain;
+    object-position: center;
     filter: contrast(1.1) brightness(0.95);
     transition: all 0.2s ease;
+}
+
+/* Specific adjustments for common logo aspect ratios */
+.flwins-partner-logo img[alt*="Education"] {
+    max-width: 160px;
+    max-height: 45px;
+}
+
+.flwins-partner-logo img[alt*="CareerSource"] {
+    max-width: 140px;
+    max-height: 50px;
+}
+
+.flwins-partner-logo img[alt*="Commerce"] {
+    max-width: 150px;
+    max-height: 50px;
+}
+
+.flwins-partner-logo img[alt*="Children"] {
+    max-width: 130px;
+    max-height: 50px;
+}
+
+.flwins-partner-card:hover .flwins-partner-logo {
+    background-color: rgba(255, 255, 255, 0.8);
 }
 
 .flwins-partner-card:hover .flwins-partner-logo img {
