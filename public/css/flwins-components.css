@@ -342,8 +342,9 @@
 }
 
 .flwins-partner-logo img[alt*="CareerSource"] {
-    max-width: 85px;
-    max-height: 35px;
+    max-width: 65px;
+    max-height: 28px;
+    transform: scale(0.85);
 }
 
 .flwins-partner-logo img[alt*="Commerce"] {
