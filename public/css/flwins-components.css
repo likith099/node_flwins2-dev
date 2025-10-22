@@ -58,6 +58,9 @@
 /* Navigation */
 .flwins-nav {
     display: none;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
 }
 
 .flwins-nav-list {
@@ -67,6 +70,23 @@
     margin: 0;
     padding: 0;
     list-style: none;
+}
+
+/* Navigation Actions */
+.flwins-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--flwins-space-4);
+    margin-left: auto;
+}
+
+.flwins-nav-signin {
+    color: var(--flwins-primary) !important;
+    background: none !important;
+}
+
+.flwins-nav-signin:hover {
+    background-color: var(--flwins-primary-lighter) !important;
 }
 
 .flwins-nav-link {
@@ -667,6 +687,20 @@ img[src*="careersource-logo"] {
         flex-direction: column;
         gap: 0;
         padding: var(--flwins-space-4);
+        margin-bottom: var(--flwins-space-4);
+    }
+    
+    .flwins-nav-actions {
+        flex-direction: column;
+        gap: var(--flwins-space-3);
+        padding: var(--flwins-space-4);
+        border-top: var(--flwins-border-width) solid var(--flwins-light-gray);
+        margin-left: 0;
+    }
+    
+    .flwins-nav-actions .flwins-btn {
+        width: 100%;
+        justify-content: center;
     }
     
     .flwins-nav-item {
