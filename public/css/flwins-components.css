@@ -24,7 +24,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--flwins-space-8);
+    gap: var(--flwins-space-4);
+    flex-wrap: nowrap;
 }
 
 .flwins-logo img {
@@ -60,24 +61,27 @@
     display: none;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
 }
 
 .flwins-nav-list {
     display: flex;
     align-items: center;
-    gap: var(--flwins-space-8);
+    gap: var(--flwins-space-6);
     margin: 0;
     padding: 0;
     list-style: none;
+    flex-shrink: 1;
 }
 
 /* Navigation Actions */
 .flwins-nav-actions {
     display: flex;
     align-items: center;
-    gap: var(--flwins-space-4);
-    margin-left: auto;
+    gap: var(--flwins-space-3);
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .flwins-nav-signin {
@@ -93,7 +97,7 @@
     display: flex;
     align-items: center;
     gap: var(--flwins-space-2);
-    padding: var(--flwins-space-3) var(--flwins-space-4);
+    padding: var(--flwins-space-3) var(--flwins-space-3);
     font-size: var(--flwins-font-size-md);
     font-weight: var(--flwins-font-weight-medium);
     color: var(--flwins-primary);
@@ -103,6 +107,7 @@
     background: none;
     border: none;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .flwins-nav-link:hover,
@@ -631,11 +636,32 @@ img[src*="careersource-logo"] {
     }
     
     .flwins-nav {
-        display: block;
+        display: flex;
     }
     
     .flwins-hero-actions {
         flex-wrap: nowrap;
+    }
+}
+
+/* Compact navigation for medium screens */
+@media (min-width: 768px) and (max-width: 1200px) {
+    .flwins-nav-list {
+        gap: var(--flwins-space-4);
+    }
+    
+    .flwins-nav-link {
+        padding: var(--flwins-space-3) var(--flwins-space-2);
+        font-size: var(--flwins-font-size-sm);
+    }
+    
+    .flwins-nav-actions {
+        gap: var(--flwins-space-2);
+    }
+    
+    .flwins-nav-actions .flwins-btn {
+        padding: var(--flwins-space-2) var(--flwins-space-3);
+        font-size: var(--flwins-font-size-sm);
     }
 }
 
