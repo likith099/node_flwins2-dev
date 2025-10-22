@@ -341,19 +341,17 @@
     max-height: 40px !important;
 }
 
-/* Ultra-specific CareerSource logo override - multiple selectors for maximum coverage */
+/* Balanced CareerSource logo sizing */
 .flwins-partner-card:first-child .flwins-partner-logo img,
 .flwins-partner-logo img[src*="careersource-logo"],
 .flwins-partner-logo img[src="/images/careersource-logo.png"],
 .flwins-partner-logo img[alt*="CareerSource"],
 img[src*="careersource-logo"] {
-    width: 35px !important;
-    height: 18px !important;
-    max-width: 35px !important;
-    max-height: 18px !important;
-    min-width: 35px !important;
-    min-height: 18px !important;
-    transform: scale(0.5) !important;
+    max-width: 80px !important;
+    max-height: 35px !important;
+    width: auto !important;
+    height: auto !important;
+    transform: scale(0.85) !important;
     object-fit: contain !important;
     display: block !important;
 }
