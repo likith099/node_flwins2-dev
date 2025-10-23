@@ -491,7 +491,14 @@ class FLWINSApp {
         
         try {
             // Try the direct Azure endpoint first - this is most reliable
-            const response = await fetch('/.auth/me');
+            const response = await fetch('/.auth/me', {
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
             
             if (response.ok) {
                 const authData = await response.json();
@@ -513,7 +520,14 @@ class FLWINSApp {
             
             // If that didn't work, try our custom endpoint
             console.log('🔍 Trying custom auth endpoint...');
-            const customResponse = await fetch('/api/auth/status');
+            const customResponse = await fetch('/api/auth/status', {
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
             if (customResponse.ok) {
                 const customData = await customResponse.json();
                 console.log('✅ Custom auth response:', customData);
