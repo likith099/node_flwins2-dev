@@ -559,12 +559,12 @@ const FLWINSUtils = {
     handleAuthenticatedUser(userInfo) {
         const anonymousActions = document.getElementById('anonymous-actions');
         const authenticatedActions = document.getElementById('authenticated-actions');
-        const userNameElement = document.getElementById('user-name');
+        const profileNameElement = document.getElementById('profile-name');
 
         if (anonymousActions) anonymousActions.style.display = 'none';
         if (authenticatedActions) authenticatedActions.style.display = 'flex';
         
-        if (userNameElement && userInfo.user_claims) {
+        if (profileNameElement && userInfo.user_claims) {
             // Extract user name from claims
             const nameClaim = userInfo.user_claims.find(claim => 
                 claim.typ === 'name' || claim.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'
@@ -574,8 +574,11 @@ const FLWINSUtils = {
             );
             
             const displayName = nameClaim?.val || emailClaim?.val || 'User';
-            userNameElement.textContent = `Welcome, ${displayName.split('@')[0]}`;
+            profileNameElement.textContent = displayName.split('@')[0];
         }
+
+        // Setup profile dropdown
+        this.setupProfileDropdown();
     },
 
     handleAnonymousUser() {
@@ -584,6 +587,35 @@ const FLWINSUtils = {
 
         if (anonymousActions) anonymousActions.style.display = 'flex';
         if (authenticatedActions) authenticatedActions.style.display = 'none';
+    },
+
+    setupProfileDropdown() {
+        const profileBtn = document.getElementById('profile-btn');
+        const profileMenu = document.getElementById('profile-menu');
+
+        if (!profileBtn || !profileMenu) return;
+
+        profileBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const isExpanded = profileBtn.getAttribute('aria-expanded') === 'true';
+            profileBtn.setAttribute('aria-expanded', !isExpanded);
+        });
+
+        // Close profile menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!profileBtn.contains(e.target) && !profileMenu.contains(e.target)) {
+                profileBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Handle escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                profileBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
     }
 };
 

@@ -66,6 +66,44 @@ app.get('/flwins.html', (req, res) => {
   res.sendFile(__dirname + '/public/flwins.html');
 });
 
+// Profile page route
+app.get('/profile', (req, res) => {
+  res.sendFile(__dirname + '/public/profile.html');
+});
+
+// API endpoint to get user profile
+app.get('/api/profile', async (req, res) => {
+  try {
+    // Get user info from Azure AD
+    const authResponse = await fetch(`${req.protocol}://${req.get('host')}/.auth/me`);
+    
+    if (authResponse.ok) {
+      const authData = await authResponse.json();
+      if (authData && authData.length > 0) {
+        const userInfo = authData[0];
+        res.json({ user: userInfo });
+      } else {
+        res.status(401).json({ error: 'User not authenticated' });
+      }
+    } else {
+      res.status(401).json({ error: 'Authentication check failed' });
+    }
+  } catch (error) {
+    console.error('Profile API error:', error);
+    res.status(500).json({ error: 'Failed to get user profile' });
+  }
+});
+
+// API endpoint to update user profile
+app.post('/api/profile', express.json(), (req, res) => {
+  // Note: Azure AD user attributes are typically read-only for standard apps
+  // This endpoint would need Microsoft Graph API permissions to update user profiles
+  res.json({ 
+    message: 'Profile update received',
+    note: 'Azure AD profile updates require Microsoft Graph API integration'
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

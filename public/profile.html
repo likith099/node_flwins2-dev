@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - FL WINS</title>
+    <meta name="description" content="Manage your FL WINS profile and personal information.">
+    <link rel="stylesheet" href="/css/flwins-styles.css">
+    <link rel="stylesheet" href="/css/flwins-components.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+</head>
+<body>
+    <!-- Header -->
+    <header class="flwins-header" role="banner">
+        <div class="flwins-header-top">
+            <div class="flwins-container">
+                <div class="flwins-header-top-content">
+                    <div class="flwins-logo">
+                        <a href="/" aria-label="FL WINS Home">
+                            <img src="/images/FLWinsLogo.png" alt="FL WINS" width="120" height="60">
+                        </a>
+                    </div>
+                    
+                    <!-- Mobile Menu Button -->
+                    <button class="flwins-mobile-menu-btn" aria-label="Toggle navigation menu" aria-expanded="false">
+                        <span class="flwins-hamburger"></span>
+                        <span class="flwins-hamburger"></span>
+                        <span class="flwins-hamburger"></span>
+                    </button>
+                    
+                    <!-- Navigation -->
+                    <nav class="flwins-nav" role="navigation" aria-label="Main navigation">
+                        <ul class="flwins-nav-list">
+                            <li class="flwins-nav-item">
+                                <a href="/" class="flwins-nav-link">Home</a>
+                            </li>
+                            <li class="flwins-nav-item flwins-nav-dropdown">
+                                <button class="flwins-nav-link flwins-dropdown-trigger" aria-expanded="false">
+                                    Partners
+                                    <svg class="flwins-dropdown-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                        <path d="M8 10.5L3.5 6H12.5L8 10.5Z"/>
+                                    </svg>
+                                </button>
+                                <ul class="flwins-dropdown-menu" role="menu">
+                                    <li role="none">
+                                        <a href="/partners/careersource" class="flwins-dropdown-link" role="menuitem">CareerSource Florida</a>
+                                    </li>
+                                    <li role="none">
+                                        <a href="/partners/education" class="flwins-dropdown-link" role="menuitem">Department of Education</a>
+                                    </li>
+                                    <li role="none">
+                                        <a href="/partners/children-families" class="flwins-dropdown-link" role="menuitem">Department of Children and Families</a>
+                                    </li>
+                                    <li role="none">
+                                        <a href="/partners/floridacommerce" class="flwins-dropdown-link" role="menuitem">FloridaCommerce</a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li class="flwins-nav-item">
+                                <a href="/services" class="flwins-nav-link">Services</a>
+                            </li>
+                            <li class="flwins-nav-item">
+                                <a href="/learn-more" class="flwins-nav-link">Learn More</a>
+                            </li>
+                        </ul>
+                        
+                        <!-- Account Actions -->
+                        <div class="flwins-nav-actions" id="nav-actions">
+                            <!-- Anonymous users -->
+                            <div id="anonymous-actions">
+                                <a href="/signin" class="flwins-nav-link flwins-nav-signin">Sign In</a>
+                                <a href="/create-account" class="flwins-btn flwins-btn-primary flwins-btn-sm">Create Account</a>
+                            </div>
+                            <!-- Authenticated users -->
+                            <div id="authenticated-actions" style="display: none;">
+                                <div class="flwins-user-dropdown">
+                                    <button class="flwins-profile-btn" id="profile-btn" aria-expanded="false">
+                                        <svg class="flwins-profile-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 7.5V5.5C15 4.7 14.3 4 13.5 4H10.5C9.7 4 9 4.7 9 5.5V7.5L3 7V9L9 8.5V18C9 18.6 9.4 19 10 19H14C14.6 19 15 18.6 15 18V8.5L21 9Z"/>
+                                        </svg>
+                                        <span class="flwins-profile-name" id="profile-name">User</span>
+                                        <svg class="flwins-dropdown-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                            <path d="M8 10.5L3.5 6H12.5L8 10.5Z"/>
+                                        </svg>
+                                    </button>
+                                    <ul class="flwins-profile-menu" id="profile-menu" role="menu">
+                                        <li role="none">
+                                            <a href="/profile" class="flwins-dropdown-link flwins-nav-link-active" role="menuitem">My Profile</a>
+                                        </li>
+                                        <li role="none">
+                                            <a href="/signout" class="flwins-dropdown-link" role="menuitem">Sign Out</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main role="main" id="main">
+        <!-- Profile Section -->
+        <section class="flwins-profile-section">
+            <div class="flwins-container">
+                <div class="flwins-profile-header">
+                    <h1 class="flwins-profile-title">My Profile</h1>
+                    <p class="flwins-profile-subtitle">Manage your personal information and preferences</p>
+                </div>
+                
+                <div class="flwins-profile-content">
+                    <div class="flwins-profile-card">
+                        <div class="flwins-profile-avatar">
+                            <div class="flwins-avatar-circle">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 7.5V5.5C15 4.7 14.3 4 13.5 4H10.5C9.7 4 9 4.7 9 5.5V7.5L3 7V9L9 8.5V18C9 18.6 9.4 19 10 19H14C14.6 19 15 18.6 15 18V8.5L21 9Z"/>
+                                </svg>
+                            </div>
+                            <h2 class="flwins-profile-user-name" id="profile-display-name">Loading...</h2>
+                        </div>
+                        
+                        <form class="flwins-profile-form" id="profile-form">
+                            <div class="flwins-form-section">
+                                <h3 class="flwins-form-section-title">Basic Information</h3>
+                                <p class="flwins-form-section-note">Information from Azure Active Directory (read-only)</p>
+                                
+                                <div class="flwins-form-row">
+                                    <div class="flwins-form-group">
+                                        <label for="firstName" class="flwins-form-label">First Name</label>
+                                        <input type="text" id="firstName" name="firstName" class="flwins-form-input" readonly>
+                                    </div>
+                                    <div class="flwins-form-group">
+                                        <label for="lastName" class="flwins-form-label">Last Name</label>
+                                        <input type="text" id="lastName" name="lastName" class="flwins-form-input" readonly>
+                                    </div>
+                                </div>
+                                
+                                <div class="flwins-form-group">
+                                    <label for="email" class="flwins-form-label">Email Address</label>
+                                    <input type="email" id="email" name="email" class="flwins-form-input" readonly>
+                                </div>
+                                
+                                <div class="flwins-form-group">
+                                    <label for="department" class="flwins-form-label">Department</label>
+                                    <input type="text" id="department" name="department" class="flwins-form-input" readonly>
+                                </div>
+                            </div>
+                            
+                            <div class="flwins-form-section">
+                                <h3 class="flwins-form-section-title">Additional Information</h3>
+                                <p class="flwins-form-section-note">You can update these fields</p>
+                                
+                                <div class="flwins-form-group">
+                                    <label for="address" class="flwins-form-label">Address</label>
+                                    <textarea id="address" name="address" class="flwins-form-textarea" rows="3" placeholder="Enter your address"></textarea>
+                                </div>
+                                
+                                <div class="flwins-form-row">
+                                    <div class="flwins-form-group">
+                                        <label for="city" class="flwins-form-label">City</label>
+                                        <input type="text" id="city" name="city" class="flwins-form-input" placeholder="Enter city">
+                                    </div>
+                                    <div class="flwins-form-group">
+                                        <label for="state" class="flwins-form-label">State</label>
+                                        <select id="state" name="state" class="flwins-form-select">
+                                            <option value="">Select State</option>
+                                            <option value="FL">Florida</option>
+                                            <option value="AL">Alabama</option>
+                                            <option value="GA">Georgia</option>
+                                            <!-- Add more states as needed -->
+                                        </select>
+                                    </div>
+                                    <div class="flwins-form-group">
+                                        <label for="zipCode" class="flwins-form-label">ZIP Code</label>
+                                        <input type="text" id="zipCode" name="zipCode" class="flwins-form-input" placeholder="Enter ZIP code">
+                                    </div>
+                                </div>
+                                
+                                <div class="flwins-form-group">
+                                    <label for="phone" class="flwins-form-label">Phone Number</label>
+                                    <input type="tel" id="phone" name="phone" class="flwins-form-input" placeholder="Enter phone number">
+                                </div>
+                            </div>
+                            
+                            <div class="flwins-form-actions">
+                                <button type="submit" class="flwins-btn flwins-btn-primary">Update Profile</button>
+                                <a href="/" class="flwins-btn flwins-btn-secondary">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="flwins-footer" role="contentinfo">
+        <div class="flwins-container">
+            <div class="flwins-footer-content">
+                <div class="flwins-footer-section">
+                    <div class="flwins-footer-logo">
+                        <img src="/images/flwins-logo-white.svg" alt="FL WINS" width="120" height="60">
+                    </div>
+                    <p class="flwins-footer-description">
+                        Florida's Workforce Innovation Network System connecting job seekers, employers, and training providers across the state.
+                    </p>
+                </div>
+                
+                <div class="flwins-footer-section">
+                    <h3 class="flwins-footer-title">Services</h3>
+                    <ul class="flwins-footer-links">
+                        <li><a href="/services/job-search">Job Search</a></li>
+                        <li><a href="/services/training">Training Programs</a></li>
+                        <li><a href="/services/employers">Employer Services</a></li>
+                        <li><a href="/services/counseling">Career Counseling</a></li>
+                    </ul>
+                </div>
+                
+                <div class="flwins-footer-section">
+                    <h3 class="flwins-footer-title">Partners</h3>
+                    <ul class="flwins-footer-links">
+                        <li><a href="/partners/careersource">CareerSource Florida</a></li>
+                        <li><a href="/partners/education">Department of Education</a></li>
+                        <li><a href="/partners/children-families">Department of Children and Families</a></li>
+                        <li><a href="/partners/floridacommerce">FloridaCommerce</a></li>
+                    </ul>
+                </div>
+                
+                <div class="flwins-footer-section">
+                    <h3 class="flwins-footer-title">Resources</h3>
+                    <ul class="flwins-footer-links">
+                        <li><a href="/about">About FL WINS</a></li>
+                        <li><a href="/contact">Contact Us</a></li>
+                        <li><a href="/help">Help & Support</a></li>
+                        <li><a href="/accessibility">Accessibility</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="flwins-footer-bottom">
+                <div class="flwins-footer-legal">
+                    <p>&copy; 2024 State of Florida. All rights reserved.</p>
+                    <ul class="flwins-footer-legal-links">
+                        <li><a href="/privacy">Privacy Policy</a></li>
+                        <li><a href="/terms">Terms of Use</a></li>
+                        <li><a href="/accessibility">Accessibility Statement</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/js/flwins-main.js" defer></script>
+    <script src="/js/profile.js" defer></script>
+</body>
+</html>
