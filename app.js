@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const fetch = require('node-fetch');
 require('dotenv').config();
 
 const app = express();
@@ -97,6 +98,41 @@ app.get('/api/profile', (req, res) => {
   } catch (error) {
     console.error('Profile API error:', error);
     res.status(500).json({ error: 'Failed to get user profile' });
+  }
+});
+
+// API endpoint to check authentication status
+app.get('/api/auth/status', (req, res) => {
+  try {
+    const clientPrincipal = req.headers['x-ms-client-principal'];
+    const clientPrincipalIdp = req.headers['x-ms-client-principal-idp'];
+    const clientPrincipalName = req.headers['x-ms-client-principal-name'];
+    
+    if (clientPrincipal) {
+      const decoded = Buffer.from(clientPrincipal, 'base64').toString('ascii');
+      const userInfo = JSON.parse(decoded);
+      
+      res.json({
+        authenticated: true,
+        user: {
+          id: userInfo.userId || userInfo.sid,
+          name: userInfo.userDetails || clientPrincipalName,
+          email: userInfo.claims?.find(c => c.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress')?.val,
+          provider: clientPrincipalIdp || 'aad'
+        }
+      });
+    } else {
+      res.json({
+        authenticated: false,
+        user: null
+      });
+    }
+  } catch (error) {
+    console.error('Auth status error:', error);
+    res.status(500).json({ 
+      error: 'Failed to check authentication status',
+      authenticated: false 
+    });
   }
 });
 

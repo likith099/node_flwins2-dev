@@ -480,6 +480,117 @@ class FLWINSApp {
             }
         });
     }
+
+    /**
+     * Authentication State Management
+     */
+    async setupAuthentication() {
+        try {
+            console.log('Checking authentication status...');
+            
+            // Use our new auth status endpoint
+            const response = await fetch('/api/auth/status', {
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const authData = await response.json();
+                console.log('Auth response:', authData);
+                
+                if (authData.authenticated && authData.user) {
+                    // User is authenticated
+                    this.handleAuthenticatedUser(authData.user);
+                } else {
+                    // User is not authenticated
+                    this.handleAnonymousUser();
+                }
+            } else {
+                console.log('Auth endpoint returned error:', response.status);
+                this.handleAnonymousUser();
+            }
+        } catch (error) {
+            console.log('Authentication check failed, assuming anonymous user:', error);
+            this.handleAnonymousUser();
+        }
+    }
+
+    handleAuthenticatedUser(userInfo) {
+        console.log('User authenticated:', userInfo);
+        
+        const anonymousActions = document.getElementById('anonymous-actions');
+        const authenticatedActions = document.getElementById('authenticated-actions');
+        const profileNameElement = document.getElementById('profile-name');
+
+        if (anonymousActions) {
+            anonymousActions.style.display = 'none';
+            console.log('Hidden anonymous actions');
+        }
+        if (authenticatedActions) {
+            authenticatedActions.style.display = 'flex';
+            console.log('Shown authenticated actions');
+        }
+        
+        if (profileNameElement) {
+            const displayName = userInfo.name || userInfo.email || 'User';
+            // Extract first name or part before @ for email
+            const shortName = displayName.includes('@') ? 
+                displayName.split('@')[0] : 
+                displayName.split(' ')[0];
+            profileNameElement.textContent = shortName;
+            console.log('Set profile name to:', shortName);
+        }
+
+        // Setup profile dropdown
+        this.setupProfileDropdown();
+    }
+
+    handleAnonymousUser() {
+        console.log('User not authenticated, showing anonymous actions');
+        
+        const anonymousActions = document.getElementById('anonymous-actions');
+        const authenticatedActions = document.getElementById('authenticated-actions');
+
+        if (anonymousActions) {
+            anonymousActions.style.display = 'flex';
+            console.log('Shown anonymous actions');
+        }
+        if (authenticatedActions) {
+            authenticatedActions.style.display = 'none';
+            console.log('Hidden authenticated actions');
+        }
+    }
+
+    setupProfileDropdown() {
+        const profileBtn = document.getElementById('profile-btn');
+        const profileMenu = document.getElementById('profile-menu');
+
+        if (!profileBtn || !profileMenu) return;
+
+        profileBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const isExpanded = profileBtn.getAttribute('aria-expanded') === 'true';
+            profileBtn.setAttribute('aria-expanded', !isExpanded);
+        });
+
+        // Close profile menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!profileBtn.contains(e.target) && !profileMenu.contains(e.target)) {
+                profileBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Handle escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                profileBtn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
 }
 
 /**
@@ -526,120 +637,6 @@ const FLWINSUtils = {
             top: rect.top + window.pageYOffset,
             left: rect.left + window.pageXOffset
         };
-    },
-
-    /**
-     * Authentication State Management
-     */
-    async setupAuthentication() {
-        try {
-            // First try to check if we have authentication headers
-            const response = await fetch('/.auth/me', {
-                credentials: 'include'
-            });
-            
-            if (response.ok) {
-                const authData = await response.json();
-                
-                if (authData && authData.length > 0 && authData[0].user_id) {
-                    // User is authenticated
-                    this.handleAuthenticatedUser(authData[0]);
-                } else {
-                    // User is not authenticated
-                    this.handleAnonymousUser();
-                }
-            } else {
-                // Auth endpoint not available or user not authenticated
-                this.handleAnonymousUser();
-            }
-        } catch (error) {
-            console.log('Authentication check failed, assuming anonymous user:', error);
-            this.handleAnonymousUser();
-        }
-    },
-
-    handleAuthenticatedUser(userInfo) {
-        console.log('User authenticated:', userInfo);
-        
-        const anonymousActions = document.getElementById('anonymous-actions');
-        const authenticatedActions = document.getElementById('authenticated-actions');
-        const profileNameElement = document.getElementById('profile-name');
-
-        if (anonymousActions) {
-            anonymousActions.style.display = 'none';
-            console.log('Hidden anonymous actions');
-        }
-        if (authenticatedActions) {
-            authenticatedActions.style.display = 'flex';
-            console.log('Shown authenticated actions');
-        }
-        
-        if (profileNameElement && userInfo.user_claims) {
-            // Extract user name from claims
-            const nameClaim = userInfo.user_claims.find(claim => 
-                claim.typ === 'name' || 
-                claim.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name' ||
-                claim.typ === 'http://schemas.microsoft.com/identity/claims/displayname'
-            );
-            const emailClaim = userInfo.user_claims.find(claim => 
-                claim.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress' ||
-                claim.typ === 'email'
-            );
-            
-            const displayName = nameClaim?.val || emailClaim?.val || userInfo.user_id || 'User';
-            profileNameElement.textContent = displayName.split('@')[0];
-            console.log('Set profile name to:', displayName.split('@')[0]);
-        } else if (profileNameElement) {
-            profileNameElement.textContent = userInfo.user_id || 'User';
-        }
-
-        // Setup profile dropdown
-        this.setupProfileDropdown();
-    },
-
-    handleAnonymousUser() {
-        console.log('User not authenticated, showing anonymous actions');
-        
-        const anonymousActions = document.getElementById('anonymous-actions');
-        const authenticatedActions = document.getElementById('authenticated-actions');
-
-        if (anonymousActions) {
-            anonymousActions.style.display = 'flex';
-            console.log('Shown anonymous actions');
-        }
-        if (authenticatedActions) {
-            authenticatedActions.style.display = 'none';
-            console.log('Hidden authenticated actions');
-        }
-    },
-
-    setupProfileDropdown() {
-        const profileBtn = document.getElementById('profile-btn');
-        const profileMenu = document.getElementById('profile-menu');
-
-        if (!profileBtn || !profileMenu) return;
-
-        profileBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const isExpanded = profileBtn.getAttribute('aria-expanded') === 'true';
-            profileBtn.setAttribute('aria-expanded', !isExpanded);
-        });
-
-        // Close profile menu when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!profileBtn.contains(e.target) && !profileMenu.contains(e.target)) {
-                profileBtn.setAttribute('aria-expanded', 'false');
-            }
-        });
-
-        // Handle escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                profileBtn.setAttribute('aria-expanded', 'false');
-            }
-        });
     }
 };
 
