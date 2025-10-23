@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const fetch = require('node-fetch');
+const fetch = globalThis.fetch || ((...args) => import('node-fetch').then(({ default: fetchFn }) => fetchFn(...args)));
 require('dotenv').config();
 
 const app = express();
@@ -77,24 +77,128 @@ app.get('/profile', (req, res) => {
   res.sendFile(__dirname + '/public/profile.html');
 });
 
+// Helper to extract claim values
+const getClaimValue = (claims = [], claimTypes = []) => {
+  for (const type of claimTypes) {
+    const claim = claims.find(c => c.typ === type);
+    if (claim && claim.val) {
+      return claim.val;
+    }
+  }
+  return null;
+};
+
+const getAppBaseUrl = (req) => {
+  const protocol = req.get('x-forwarded-proto') || req.protocol;
+  const host = req.get('host');
+  return `${protocol}://${host}`;
+};
+
 // API endpoint to get user profile
-app.get('/api/profile', (req, res) => {
+app.get('/api/profile', async (req, res) => {
   try {
-    // For Azure App Service, the user info is available in headers
-    const clientPrincipal = req.headers['x-ms-client-principal'];
-    
-    if (clientPrincipal) {
-      // Decode the base64 encoded client principal
-      const decoded = Buffer.from(clientPrincipal, 'base64').toString('ascii');
-      const userInfo = JSON.parse(decoded);
-      res.json({ user: userInfo });
-    } else {
-      // Return a message indicating no authentication info available
-      res.status(401).json({ 
+    // Request the authenticated principal from Azure App Service
+    const authResponse = await fetch(`${getAppBaseUrl(req)}/.auth/me`, {
+      headers: {
+        cookie: req.headers.cookie || '',
+        'x-zumo-auth': req.headers['x-zumo-auth'] || ''
+      }
+    });
+
+    if (!authResponse.ok) {
+      console.warn('Azure /.auth/me returned status:', authResponse.status);
+      return res.status(401).json({
         error: 'User not authenticated',
-        message: 'No Azure authentication headers found'
+        message: 'Authentication context not available'
       });
     }
+
+    const authData = await authResponse.json();
+    const principal = authData?.[0];
+
+    if (!principal || !principal.user_id) {
+      return res.status(401).json({
+        error: 'User not authenticated',
+        message: 'Azure principal not found'
+      });
+    }
+
+    const claims = principal.user_claims || [];
+
+    // Build a base profile from the available claims
+    const baseProfile = {
+      id: principal.user_id,
+      displayName: getClaimValue(claims, [
+        'name',
+        'http://schemas.microsoft.com/identity/claims/displayname',
+        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'
+      ]),
+      firstName: getClaimValue(claims, [
+        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname',
+        'given_name'
+      ]),
+      lastName: getClaimValue(claims, [
+        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
+        'family_name'
+      ]),
+      email: getClaimValue(claims, [
+        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
+        'email',
+        'upn'
+      ]),
+      department: getClaimValue(claims, [
+        'department',
+        'http://schemas.microsoft.com/ws/2008/06/identity/claims/department'
+      ]),
+      jobTitle: getClaimValue(claims, [
+        'jobTitle',
+        'http://schemas.microsoft.com/identity/claims/jobtitle'
+      ]),
+      phone: getClaimValue(claims, [
+        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/otherphone',
+        'phone_number'
+      ])
+    };
+
+    let graphProfile = null;
+
+    // Enhance with Microsoft Graph data if an access token is available
+    const accessToken = principal.access_token;
+    if (accessToken) {
+      try {
+        const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me?$select=displayName,givenName,surname,mail,userPrincipalName,jobTitle,department,mobilePhone,businessPhones,officeLocation', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        });
+
+        if (graphResponse.ok) {
+          graphProfile = await graphResponse.json();
+
+          baseProfile.displayName = graphProfile.displayName || baseProfile.displayName;
+          baseProfile.firstName = graphProfile.givenName || baseProfile.firstName;
+          baseProfile.lastName = graphProfile.surname || baseProfile.lastName;
+          baseProfile.email = graphProfile.mail || graphProfile.userPrincipalName || baseProfile.email;
+          baseProfile.department = graphProfile.department || baseProfile.department;
+          baseProfile.jobTitle = graphProfile.jobTitle || baseProfile.jobTitle;
+          baseProfile.phone = graphProfile.mobilePhone || graphProfile.businessPhones?.[0] || baseProfile.phone;
+          baseProfile.officeLocation = graphProfile.officeLocation || baseProfile.officeLocation;
+        } else {
+          console.warn('Microsoft Graph responded with status:', graphResponse.status);
+        }
+      } catch (graphError) {
+        console.warn('Microsoft Graph request failed:', graphError.message);
+      }
+    } else {
+      console.warn('No access token available for Microsoft Graph');
+    }
+
+    res.json({
+      profile: baseProfile,
+      authProvider: principal.identity_provider,
+      claims,
+      graph: graphProfile
+    });
   } catch (error) {
     console.error('Profile API error:', error);
     res.status(500).json({ error: 'Failed to get user profile' });
@@ -153,9 +257,10 @@ app.get('/api/auth/me', async (req, res) => {
     console.log('Auth me endpoint called');
     
     // Try the built-in Azure endpoint first
-    const authResponse = await fetch(`${req.protocol}://${req.get('host')}/.auth/me`, {
+    const authResponse = await fetch(`${getAppBaseUrl(req)}/.auth/me`, {
       headers: {
-        'cookie': req.headers.cookie || ''
+        'cookie': req.headers.cookie || '',
+        'x-zumo-auth': req.headers['x-zumo-auth'] || ''
       }
     });
     

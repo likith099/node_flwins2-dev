@@ -15,11 +15,19 @@ class ProfileManager {
 
     async loadUserProfile() {
         try {
-            const response = await fetch('/api/profile');
+            const response = await fetch('/api/profile', {
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
             
             if (response.ok) {
                 const data = await response.json();
-                this.populateProfile(data.user);
+                this.populateProfile(data.profile, data.claims, data.graph);
+            } else if (response.status === 401) {
+                console.warn('User not authenticated when loading profile');
+                this.showError('Please sign in to view your profile.');
             } else {
                 console.error('Failed to load user profile');
                 this.showError('Failed to load profile information');
@@ -30,44 +38,74 @@ class ProfileManager {
         }
     }
 
-    populateProfile(userInfo) {
-        if (!userInfo || !userInfo.user_claims) {
-            console.error('Invalid user info received');
+    populateProfile(profileData = {}, claims = [], graphProfile = null) {
+        if (!profileData || typeof profileData !== 'object') {
+            console.error('Invalid profile data received');
+            this.showError('Unable to display profile details.');
             return;
         }
 
-        const claims = userInfo.user_claims;
-        
-        // Extract user information from claims
-        const nameClaim = this.findClaim(claims, ['name', 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name']);
-        const emailClaim = this.findClaim(claims, ['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress', 'email']);
-        const givenNameClaim = this.findClaim(claims, ['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname', 'given_name']);
-        const surnameClaim = this.findClaim(claims, ['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname', 'family_name']);
-        const departmentClaim = this.findClaim(claims, ['department', 'http://schemas.microsoft.com/ws/2008/06/identity/claims/department']);
+        const displayName = profileData.displayName || profileData.email || 'User';
+        const displayNameElement = document.getElementById('profile-display-name');
+        if (displayNameElement) {
+            displayNameElement.textContent = displayName;
+        }
 
-        // Populate display name
-        const displayName = nameClaim?.val || emailClaim?.val || 'User';
-        document.getElementById('profile-display-name').textContent = displayName;
+        this.setFieldValue('firstName', profileData.firstName);
+        this.setFieldValue('lastName', profileData.lastName);
+        this.setFieldValue('email', profileData.email);
+        this.setFieldValue('department', profileData.department);
+        this.setFieldValue('jobTitle', profileData.jobTitle);
+        this.setFieldValue('officeLocation', profileData.officeLocation);
+        this.setFieldValue('workPhone', profileData.phone);
 
-        // Populate form fields
-        document.getElementById('firstName').value = givenNameClaim?.val || '';
-        document.getElementById('lastName').value = surnameClaim?.val || '';
-        document.getElementById('email').value = emailClaim?.val || '';
-        document.getElementById('department').value = departmentClaim?.val || '';
+        // Pre-fill editable phone field with work phone if available
+        const editablePhone = document.getElementById('phone');
+        if (editablePhone && profileData.phone && !editablePhone.value) {
+            editablePhone.value = profileData.phone;
+        }
+
+        // Save claims for potential future use
+        this.claims = claims;
+        this.graphProfile = graphProfile;
 
         // Load additional profile data from local storage or API
-        this.loadAdditionalInfo();
+        this.loadAdditionalInfo({
+            address: profileData.address,
+            city: profileData.city,
+            state: profileData.state,
+            zipCode: profileData.zipCode,
+            phone: editablePhone?.value || profileData.phone
+        });
     }
 
-    findClaim(claims, claimTypes) {
-        for (const claimType of claimTypes) {
-            const claim = claims.find(c => c.typ === claimType);
-            if (claim) return claim;
+    setFieldValue(fieldId, value) {
+        const element = document.getElementById(fieldId);
+        if (element) {
+            element.value = value || '';
         }
-        return null;
     }
 
-    loadAdditionalInfo() {
+    loadAdditionalInfo(defaultValues = {}) {
+        // Apply default values provided (e.g., from Azure profile)
+        if (defaultValues && typeof defaultValues === 'object') {
+            if (defaultValues.address !== undefined) {
+                this.setFieldValue('address', defaultValues.address);
+            }
+            if (defaultValues.city !== undefined) {
+                this.setFieldValue('city', defaultValues.city);
+            }
+            if (defaultValues.state !== undefined) {
+                this.setFieldValue('state', defaultValues.state);
+            }
+            if (defaultValues.zipCode !== undefined) {
+                this.setFieldValue('zipCode', defaultValues.zipCode);
+            }
+            if (defaultValues.phone !== undefined) {
+                this.setFieldValue('phone', defaultValues.phone);
+            }
+        }
+
         // Load additional profile information from localStorage
         const savedProfile = localStorage.getItem('flwins-profile');
         if (savedProfile) {
