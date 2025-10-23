@@ -65,9 +65,17 @@
                         </ul>
                         
                         <!-- Account Actions -->
-                        <div class="flwins-nav-actions">
-                            <a href="/signin" class="flwins-nav-link flwins-nav-signin">Sign In</a>
-                            <a href="/create-account" class="flwins-btn flwins-btn-primary flwins-btn-sm">Create Account</a>
+                        <div class="flwins-nav-actions" id="nav-actions">
+                            <!-- Anonymous users -->
+                            <div id="anonymous-actions">
+                                <a href="/.auth/login/aad" class="flwins-nav-link flwins-nav-signin">Sign In</a>
+                                <a href="/.auth/login/aad" class="flwins-btn flwins-btn-primary flwins-btn-sm">Create Account</a>
+                            </div>
+                            <!-- Authenticated users -->
+                            <div id="authenticated-actions" style="display: none;">
+                                <span class="flwins-user-info" id="user-name">Welcome, User</span>
+                                <a href="/.auth/logout" class="flwins-nav-link flwins-nav-signout">Sign Out</a>
+                            </div>
                         </div>
                     </nav>
                 </div>

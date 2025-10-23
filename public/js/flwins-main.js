@@ -14,6 +14,7 @@ class FLWINSApp {
         this.setupSmoothScrolling();
         this.setupAccessibility();
         this.setupLazyLoading();
+        this.setupAuthentication();
     }
 
     /**
@@ -525,6 +526,64 @@ const FLWINSUtils = {
             top: rect.top + window.pageYOffset,
             left: rect.left + window.pageXOffset
         };
+    },
+
+    /**
+     * Authentication State Management
+     */
+    async setupAuthentication() {
+        try {
+            // Check if user is authenticated by calling Azure App Service auth endpoint
+            const response = await fetch('/.auth/me');
+            
+            if (response.ok) {
+                const authData = await response.json();
+                
+                if (authData && authData.length > 0) {
+                    // User is authenticated
+                    this.handleAuthenticatedUser(authData[0]);
+                } else {
+                    // User is not authenticated
+                    this.handleAnonymousUser();
+                }
+            } else {
+                // Auth endpoint not available or user not authenticated
+                this.handleAnonymousUser();
+            }
+        } catch (error) {
+            console.log('Authentication check failed, assuming anonymous user');
+            this.handleAnonymousUser();
+        }
+    },
+
+    handleAuthenticatedUser(userInfo) {
+        const anonymousActions = document.getElementById('anonymous-actions');
+        const authenticatedActions = document.getElementById('authenticated-actions');
+        const userNameElement = document.getElementById('user-name');
+
+        if (anonymousActions) anonymousActions.style.display = 'none';
+        if (authenticatedActions) authenticatedActions.style.display = 'flex';
+        
+        if (userNameElement && userInfo.user_claims) {
+            // Extract user name from claims
+            const nameClaim = userInfo.user_claims.find(claim => 
+                claim.typ === 'name' || claim.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'
+            );
+            const emailClaim = userInfo.user_claims.find(claim => 
+                claim.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'
+            );
+            
+            const displayName = nameClaim?.val || emailClaim?.val || 'User';
+            userNameElement.textContent = `Welcome, ${displayName.split('@')[0]}`;
+        }
+    },
+
+    handleAnonymousUser() {
+        const anonymousActions = document.getElementById('anonymous-actions');
+        const authenticatedActions = document.getElementById('authenticated-actions');
+
+        if (anonymousActions) anonymousActions.style.display = 'flex';
+        if (authenticatedActions) authenticatedActions.style.display = 'none';
     }
 };
 

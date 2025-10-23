@@ -89,8 +89,20 @@
     background: none !important;
 }
 
-.flwins-nav-signin:hover {
+.flwins-nav-signin:hover,
+.flwins-nav-signout:hover {
     background-color: var(--flwins-primary-lighter) !important;
+}
+
+.flwins-user-info {
+    font-size: var(--flwins-font-size-sm);
+    color: var(--flwins-primary);
+    font-weight: var(--flwins-font-weight-medium);
+    padding: var(--flwins-space-2) var(--flwins-space-3);
+    white-space: nowrap;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .flwins-nav-link {
