@@ -14,7 +14,9 @@ class FLWINSApp {
         this.setupSmoothScrolling();
         this.setupAccessibility();
         this.setupLazyLoading();
-        this.setupAuthentication();
+        
+        // Setup authentication with delay to ensure DOM is ready
+        setTimeout(() => this.setupAuthentication(), 100);
     }
 
     /**
@@ -482,185 +484,141 @@ class FLWINSApp {
     }
 
     /**
-     * Authentication State Management
+     * Authentication State Management - Simplified
      */
     async setupAuthentication() {
-        console.log('🔐 Starting authentication check...');
+        console.log('🔐 Starting simple authentication check...');
         
         try {
-            // Try our custom auth status endpoint first
-            await this.tryAuthStatusEndpoint();
-        } catch (error) {
-            console.log('❌ Custom auth endpoint failed, trying Azure built-in endpoint...');
-            try {
-                await this.tryAzureAuthEndpoint();
-            } catch (error2) {
-                console.log('❌ Azure auth endpoint failed, trying direct .auth/me...');
-                try {
-                    await this.tryDirectAuthEndpoint();
-                } catch (error3) {
-                    console.log('❌ All authentication methods failed, showing anonymous user');
-                    this.handleAnonymousUser();
+            // Try the direct Azure endpoint first - this is most reliable
+            const response = await fetch('/.auth/me');
+            
+            if (response.ok) {
+                const authData = await response.json();
+                console.log('✅ Azure auth response:', authData);
+                
+                if (authData && authData.length > 0 && authData[0].user_id) {
+                    // User is authenticated
+                    const userInfo = authData[0];
+                    const user = {
+                        id: userInfo.user_id,
+                        name: this.extractUserName(userInfo),
+                        email: this.extractUserEmail(userInfo)
+                    };
+                    console.log('👤 Extracted user info:', user);
+                    this.handleAuthenticatedUser(user);
+                    return;
                 }
             }
+            
+            // If that didn't work, try our custom endpoint
+            console.log('🔍 Trying custom auth endpoint...');
+            const customResponse = await fetch('/api/auth/status');
+            if (customResponse.ok) {
+                const customData = await customResponse.json();
+                console.log('✅ Custom auth response:', customData);
+                
+                if (customData.authenticated && customData.user) {
+                    this.handleAuthenticatedUser(customData.user);
+                    return;
+                }
+            }
+        } catch (error) {
+            console.log('❌ Authentication check failed:', error);
         }
+        
+        // Default to anonymous user
+        console.log('👤 No authentication found, showing anonymous user');
+        this.handleAnonymousUser();
     }
 
-    async tryAuthStatusEndpoint() {
-        console.log('🔍 Trying /api/auth/status endpoint...');
-        const response = await fetch('/api/auth/status', {
-            credentials: 'include',
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
+    extractUserName(userInfo) {
+        if (!userInfo.user_claims) return userInfo.user_id;
+        
+        // Try different claim types for name
+        const nameClaims = [
+            'name',
+            'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name',
+            'http://schemas.microsoft.com/identity/claims/displayname',
+            'preferred_username'
+        ];
+        
+        for (const claimType of nameClaims) {
+            const claim = userInfo.user_claims.find(c => c.typ === claimType);
+            if (claim && claim.val) {
+                return claim.val;
             }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Auth status endpoint failed: ${response.status}`);
         }
         
-        const authData = await response.json();
-        console.log('✅ Auth status response:', authData);
-        
-        if (authData.authenticated && authData.user) {
-            this.handleAuthenticatedUser(authData.user);
-        } else {
-            this.handleAnonymousUser();
-        }
+        return userInfo.user_id;
     }
 
-    async tryAzureAuthEndpoint() {
-        console.log('🔍 Trying /api/auth/me endpoint...');
-        const response = await fetch('/api/auth/me', {
-            credentials: 'include',
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
+    extractUserEmail(userInfo) {
+        if (!userInfo.user_claims) return null;
+        
+        const emailClaims = [
+            'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
+            'email',
+            'upn'
+        ];
+        
+        for (const claimType of emailClaims) {
+            const claim = userInfo.user_claims.find(c => c.typ === claimType);
+            if (claim && claim.val) {
+                return claim.val;
             }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Auth me endpoint failed: ${response.status}`);
         }
         
-        const authData = await response.json();
-        console.log('✅ Auth me response:', authData);
-        
-        if (authData.authenticated && authData.user) {
-            this.handleAuthenticatedUser(authData.user);
-        } else {
-            this.handleAnonymousUser();
-        }
-    }
-
-    async tryDirectAuthEndpoint() {
-        console.log('🔍 Trying /.auth/me endpoint directly...');
-        const response = await fetch('/.auth/me', {
-            credentials: 'include',
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Direct auth endpoint failed: ${response.status}`);
-        }
-        
-        const authData = await response.json();
-        console.log('✅ Direct auth response:', authData);
-        
-        if (authData && authData.length > 0 && authData[0].user_id) {
-            const userInfo = authData[0];
-            const user = {
-                id: userInfo.user_id,
-                name: userInfo.user_claims?.find(c => c.typ === 'name')?.val || userInfo.user_id,
-                email: userInfo.user_claims?.find(c => c.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress')?.val,
-                provider: userInfo.identity_provider || 'aad'
-            };
-            this.handleAuthenticatedUser(user);
-        } else {
-            this.handleAnonymousUser();
-        }
+        return null;
     }
 
     handleAuthenticatedUser(userInfo) {
-        console.log('👤 User authenticated:', userInfo);
+        console.log('✅ AUTHENTICATED USER DETECTED:', userInfo);
         
+        // Get DOM elements
         const anonymousActions = document.getElementById('anonymous-actions');
         const authenticatedActions = document.getElementById('authenticated-actions');
         const profileNameElement = document.getElementById('profile-name');
 
-        console.log('🔍 DOM elements found:');
-        console.log('- anonymous-actions:', anonymousActions ? 'Found' : 'NOT FOUND');
-        console.log('- authenticated-actions:', authenticatedActions ? 'Found' : 'NOT FOUND');
-        console.log('- profile-name:', profileNameElement ? 'Found' : 'NOT FOUND');
-
+        // Show/hide appropriate actions
         if (anonymousActions) {
             anonymousActions.style.display = 'none';
-            console.log('✅ Hidden anonymous actions');
-        } else {
-            console.log('❌ Could not find anonymous-actions element');
+            console.log('✅ Hidden Sign In/Create Account buttons');
         }
         
         if (authenticatedActions) {
             authenticatedActions.style.display = 'flex';
-            console.log('✅ Shown authenticated actions');
-        } else {
-            console.log('❌ Could not find authenticated-actions element');
+            console.log('✅ Shown Profile button');
         }
         
+        // Set profile name
         if (profileNameElement) {
             const displayName = userInfo.name || userInfo.email || userInfo.id || 'User';
-            // Extract first name or part before @ for email
             const shortName = displayName.includes('@') ? 
                 displayName.split('@')[0] : 
                 displayName.split(' ')[0];
             profileNameElement.textContent = shortName;
-            console.log('✅ Set profile name to:', shortName);
-        } else {
-            console.log('❌ Could not find profile-name element');
+            console.log('✅ Profile name set to:', shortName);
         }
 
         // Setup profile dropdown
         this.setupProfileDropdown();
-        
-        // Force a DOM refresh
-        setTimeout(() => {
-            console.log('🔄 Forcing DOM refresh...');
-            const navActions = document.getElementById('nav-actions');
-            if (navActions) {
-                navActions.style.display = 'none';
-                navActions.offsetHeight; // Force reflow
-                navActions.style.display = '';
-                console.log('✅ DOM refresh completed');
-            }
-        }, 100);
     }
 
     handleAnonymousUser() {
-        console.log('👤 User not authenticated, showing anonymous actions');
+        console.log('❌ ANONYMOUS USER - showing sign in options');
         
         const anonymousActions = document.getElementById('anonymous-actions');
         const authenticatedActions = document.getElementById('authenticated-actions');
 
-        console.log('🔍 DOM elements found:');
-        console.log('- anonymous-actions:', anonymousActions ? 'Found' : 'NOT FOUND');
-        console.log('- authenticated-actions:', authenticatedActions ? 'Found' : 'NOT FOUND');
-
         if (anonymousActions) {
             anonymousActions.style.display = 'flex';
-            console.log('✅ Shown anonymous actions');
-        } else {
-            console.log('❌ Could not find anonymous-actions element');
+            console.log('✅ Shown Sign In/Create Account buttons');
         }
         
         if (authenticatedActions) {
             authenticatedActions.style.display = 'none';
-            console.log('✅ Hidden authenticated actions');
-        } else {
-            console.log('❌ Could not find authenticated-actions element');
+            console.log('✅ Hidden Profile button');  
         }
     }
 
@@ -751,17 +709,27 @@ const FLWINSUtils = {
  * Initialize the application when DOM is ready
  */
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 DOM loaded, initializing FL WINS application...');
+    
     const app = new FLWINSApp();
     
     // Make app instance globally available for debugging
     window.FLWINSApp = app;
     window.FLWINSUtils = FLWINSUtils;
     
-    // Make auth refresh function globally available for testing
+    // Make auth functions globally available for testing
     window.refreshAuth = () => app.refreshAuthentication();
+    window.checkAuth = () => app.setupAuthentication();
     
-    console.log('FL WINS application initialized successfully');
+    console.log('✅ FL WINS application initialized successfully');
     console.log('💡 Debug commands available:');
     console.log('- window.refreshAuth() - Manually refresh authentication');
+    console.log('- window.checkAuth() - Check authentication now');
     console.log('- window.FLWINSApp - Access to main app instance');
+    
+    // Also try authentication check immediately after a short delay
+    setTimeout(() => {
+        console.log('🔄 Running immediate auth check...');
+        app.setupAuthentication();
+    }, 500);
 });
