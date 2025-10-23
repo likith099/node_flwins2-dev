@@ -23,6 +23,12 @@ app.use(express.static('public'));
 
 // Routes
 app.get('/', (req, res) => {
+  // Serve the FL WINS homepage
+  res.sendFile(__dirname + '/public/flwins.html');
+});
+
+// API status endpoint
+app.get('/api/status', (req, res) => {
   res.json({
     message: 'Welcome to FLWINS2 Development Server',
     status: 'running',
@@ -37,6 +43,27 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     timestamp: new Date().toISOString()
   });
+});
+
+// Authentication routes
+app.get('/signin', (req, res) => {
+  // Redirect to Azure AD login
+  res.redirect('/.auth/login/aad');
+});
+
+app.get('/create-account', (req, res) => {
+  // Redirect to Azure AD login (same as sign in for Azure AD)
+  res.redirect('/.auth/login/aad');
+});
+
+app.get('/signout', (req, res) => {
+  // Redirect to Azure AD logout
+  res.redirect('/.auth/logout');
+});
+
+// Serve FL WINS HTML page
+app.get('/flwins.html', (req, res) => {
+  res.sendFile(__dirname + '/public/flwins.html');
 });
 
 // Error handling middleware
