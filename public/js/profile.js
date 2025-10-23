@@ -29,7 +29,8 @@ class ProfileManager {
                 console.warn('User not authenticated when loading profile');
                 this.showError('Please sign in to view your profile.');
             } else {
-                console.error('Failed to load user profile');
+                const errorText = await response.text();
+                console.error('Failed to load user profile', errorText);
                 this.showError('Failed to load profile information');
             }
         } catch (error) {
@@ -45,11 +46,17 @@ class ProfileManager {
             return;
         }
 
+        this.claims = claims;
+        this.graphProfile = graphProfile;
+
         const displayName = profileData.displayName || profileData.email || 'User';
         const displayNameElement = document.getElementById('profile-display-name');
         if (displayNameElement) {
             displayNameElement.textContent = displayName;
         }
+
+        const fieldsToReset = ['firstName', 'lastName', 'department', 'jobTitle', 'officeLocation', 'workPhone', 'address', 'city', 'state', 'zipCode', 'phone'];
+        fieldsToReset.forEach((field) => this.setFieldValue(field, ''));
 
         this.setFieldValue('firstName', profileData.firstName);
         this.setFieldValue('lastName', profileData.lastName);
@@ -57,17 +64,18 @@ class ProfileManager {
         this.setFieldValue('department', profileData.department);
         this.setFieldValue('jobTitle', profileData.jobTitle);
         this.setFieldValue('officeLocation', profileData.officeLocation);
-        this.setFieldValue('workPhone', profileData.phone);
+        this.setFieldValue('workPhone', profileData.workPhone || profileData.phone);
+        this.setFieldValue('address', profileData.address);
+        this.setFieldValue('city', profileData.city);
+        this.setFieldValue('state', profileData.state);
+        this.setFieldValue('zipCode', profileData.zipCode);
+        this.setFieldValue('phone', profileData.phone);
 
         // Pre-fill editable phone field with work phone if available
         const editablePhone = document.getElementById('phone');
         if (editablePhone && profileData.phone && !editablePhone.value) {
             editablePhone.value = profileData.phone;
         }
-
-        // Save claims for potential future use
-        this.claims = claims;
-        this.graphProfile = graphProfile;
 
         // Load additional profile data from local storage or API
         this.loadAdditionalInfo({
@@ -82,7 +90,7 @@ class ProfileManager {
     setFieldValue(fieldId, value) {
         const element = document.getElementById(fieldId);
         if (element) {
-            element.value = value || '';
+            element.value = value ?? '';
         }
     }
 
@@ -111,11 +119,11 @@ class ProfileManager {
         if (savedProfile) {
             try {
                 const profile = JSON.parse(savedProfile);
-                document.getElementById('address').value = profile.address || '';
-                document.getElementById('city').value = profile.city || '';
-                document.getElementById('state').value = profile.state || '';
-                document.getElementById('zipCode').value = profile.zipCode || '';
-                document.getElementById('phone').value = profile.phone || '';
+                if (profile.address) this.setFieldValue('address', profile.address);
+                if (profile.city) this.setFieldValue('city', profile.city);
+                if (profile.state) this.setFieldValue('state', profile.state);
+                if (profile.zipCode) this.setFieldValue('zipCode', profile.zipCode);
+                if (profile.phone) this.setFieldValue('phone', profile.phone);
             } catch (error) {
                 console.error('Error loading saved profile data:', error);
             }
@@ -134,30 +142,52 @@ class ProfileManager {
         
         const formData = new FormData(event.target);
         const profileData = {
-            address: formData.get('address'),
-            city: formData.get('city'),
-            state: formData.get('state'),
-            zipCode: formData.get('zipCode'),
-            phone: formData.get('phone')
+            firstName: formData.get('firstName')?.trim() || '',
+            lastName: formData.get('lastName')?.trim() || '',
+            department: formData.get('department')?.trim() || '',
+            jobTitle: formData.get('jobTitle')?.trim() || '',
+            officeLocation: formData.get('officeLocation')?.trim() || '',
+            workPhone: formData.get('workPhone')?.trim() || '',
+            address: formData.get('address')?.trim() || '',
+            city: formData.get('city')?.trim() || '',
+            state: formData.get('state')?.trim() || '',
+            zipCode: formData.get('zipCode')?.trim() || '',
+            phone: formData.get('phone')?.trim() || ''
         };
+
+        const payload = {};
+        Object.entries(profileData).forEach(([key, value]) => {
+            if (value !== null && value !== undefined) {
+                payload[key] = value;
+            }
+        });
 
         try {
             // Save to localStorage (since Azure AD fields are read-only)
-            localStorage.setItem('flwins-profile', JSON.stringify(profileData));
-            
-            // Optional: Send to server for additional processing
+            localStorage.setItem('flwins-profile', JSON.stringify({
+                address: profileData.address,
+                city: profileData.city,
+                state: profileData.state,
+                zipCode: profileData.zipCode,
+                phone: profileData.phone
+            }));
+
             const response = await fetch('/api/profile', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify(profileData)
+                credentials: 'include',
+                body: JSON.stringify(payload)
             });
 
             if (response.ok) {
                 this.showSuccess('Profile updated successfully!');
+                await this.loadUserProfile();
             } else {
-                this.showError('Failed to update profile on server, but changes saved locally.');
+                const errorData = await response.json().catch(() => ({}));
+                this.showError(errorData.message || errorData.error || 'Failed to update profile on server.');
             }
         } catch (error) {
             console.error('Profile update error:', error);

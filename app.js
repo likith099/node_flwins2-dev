@@ -94,104 +94,112 @@ const getAppBaseUrl = (req) => {
   return `${protocol}://${host}`;
 };
 
+class ProfileError extends Error {
+  constructor(message, status = 500) {
+    super(message);
+    this.status = status;
+  }
+}
+
+const fetchProfileData = async (req, { includeGraph = true } = {}) => {
+  const authResponse = await fetch(`${getAppBaseUrl(req)}/.auth/me`, {
+    headers: {
+      cookie: req.headers.cookie || '',
+      'x-zumo-auth': req.headers['x-zumo-auth'] || ''
+    }
+  });
+
+  if (!authResponse.ok) {
+    throw new ProfileError('Authentication context not available', authResponse.status === 401 ? 401 : 500);
+  }
+
+  const authData = await authResponse.json();
+  const principal = authData?.[0];
+
+  if (!principal || !principal.user_id) {
+    throw new ProfileError('User not authenticated', 401);
+  }
+
+  const claims = principal.user_claims || [];
+
+  const baseProfile = {
+    id: principal.user_id,
+    displayName: getClaimValue(claims, [
+      'name',
+      'http://schemas.microsoft.com/identity/claims/displayname',
+      'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'
+    ]),
+    firstName: getClaimValue(claims, [
+      'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname',
+      'given_name'
+    ]),
+    lastName: getClaimValue(claims, [
+      'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
+      'family_name'
+    ]),
+    email: getClaimValue(claims, [
+      'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
+      'email',
+      'upn'
+    ]),
+    department: getClaimValue(claims, [
+      'department',
+      'http://schemas.microsoft.com/ws/2008/06/identity/claims/department'
+    ]),
+    jobTitle: getClaimValue(claims, [
+      'jobTitle',
+      'http://schemas.microsoft.com/identity/claims/jobtitle'
+    ]),
+    phone: getClaimValue(claims, [
+      'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/otherphone',
+      'phone_number'
+    ])
+  };
+
+  let graphProfile = null;
+  const accessToken = principal.access_token;
+
+  if (includeGraph && accessToken) {
+    try {
+      const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me?$select=displayName,givenName,surname,mail,userPrincipalName,jobTitle,department,mobilePhone,businessPhones,officeLocation,streetAddress,city,state,postalCode', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      });
+
+      if (graphResponse.ok) {
+        graphProfile = await graphResponse.json();
+
+        baseProfile.displayName = graphProfile.displayName || baseProfile.displayName;
+        baseProfile.firstName = graphProfile.givenName || baseProfile.firstName;
+        baseProfile.lastName = graphProfile.surname || baseProfile.lastName;
+        baseProfile.email = graphProfile.mail || graphProfile.userPrincipalName || baseProfile.email;
+        baseProfile.department = graphProfile.department || baseProfile.department;
+        baseProfile.jobTitle = graphProfile.jobTitle || baseProfile.jobTitle;
+        baseProfile.phone = graphProfile.mobilePhone || baseProfile.phone;
+        baseProfile.workPhone = Array.isArray(graphProfile.businessPhones) ? graphProfile.businessPhones[0] : undefined;
+        baseProfile.officeLocation = graphProfile.officeLocation || baseProfile.officeLocation;
+        baseProfile.address = graphProfile.streetAddress;
+        baseProfile.city = graphProfile.city;
+        baseProfile.state = graphProfile.state;
+        baseProfile.zipCode = graphProfile.postalCode;
+      } else {
+        console.warn('Microsoft Graph responded with status:', graphResponse.status);
+      }
+    } catch (graphError) {
+      console.warn('Microsoft Graph request failed:', graphError.message);
+    }
+  } else if (!accessToken) {
+    console.warn('No access token available for Microsoft Graph');
+  }
+
+  return { principal, claims, baseProfile, graphProfile, accessToken };
+};
+
 // API endpoint to get user profile
 app.get('/api/profile', async (req, res) => {
   try {
-    // Request the authenticated principal from Azure App Service
-    const authResponse = await fetch(`${getAppBaseUrl(req)}/.auth/me`, {
-      headers: {
-        cookie: req.headers.cookie || '',
-        'x-zumo-auth': req.headers['x-zumo-auth'] || ''
-      }
-    });
-
-    if (!authResponse.ok) {
-      console.warn('Azure /.auth/me returned status:', authResponse.status);
-      return res.status(401).json({
-        error: 'User not authenticated',
-        message: 'Authentication context not available'
-      });
-    }
-
-    const authData = await authResponse.json();
-    const principal = authData?.[0];
-
-    if (!principal || !principal.user_id) {
-      return res.status(401).json({
-        error: 'User not authenticated',
-        message: 'Azure principal not found'
-      });
-    }
-
-    const claims = principal.user_claims || [];
-
-    // Build a base profile from the available claims
-    const baseProfile = {
-      id: principal.user_id,
-      displayName: getClaimValue(claims, [
-        'name',
-        'http://schemas.microsoft.com/identity/claims/displayname',
-        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'
-      ]),
-      firstName: getClaimValue(claims, [
-        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname',
-        'given_name'
-      ]),
-      lastName: getClaimValue(claims, [
-        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname',
-        'family_name'
-      ]),
-      email: getClaimValue(claims, [
-        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
-        'email',
-        'upn'
-      ]),
-      department: getClaimValue(claims, [
-        'department',
-        'http://schemas.microsoft.com/ws/2008/06/identity/claims/department'
-      ]),
-      jobTitle: getClaimValue(claims, [
-        'jobTitle',
-        'http://schemas.microsoft.com/identity/claims/jobtitle'
-      ]),
-      phone: getClaimValue(claims, [
-        'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/otherphone',
-        'phone_number'
-      ])
-    };
-
-    let graphProfile = null;
-
-    // Enhance with Microsoft Graph data if an access token is available
-    const accessToken = principal.access_token;
-    if (accessToken) {
-      try {
-        const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me?$select=displayName,givenName,surname,mail,userPrincipalName,jobTitle,department,mobilePhone,businessPhones,officeLocation', {
-          headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
-        });
-
-        if (graphResponse.ok) {
-          graphProfile = await graphResponse.json();
-
-          baseProfile.displayName = graphProfile.displayName || baseProfile.displayName;
-          baseProfile.firstName = graphProfile.givenName || baseProfile.firstName;
-          baseProfile.lastName = graphProfile.surname || baseProfile.lastName;
-          baseProfile.email = graphProfile.mail || graphProfile.userPrincipalName || baseProfile.email;
-          baseProfile.department = graphProfile.department || baseProfile.department;
-          baseProfile.jobTitle = graphProfile.jobTitle || baseProfile.jobTitle;
-          baseProfile.phone = graphProfile.mobilePhone || graphProfile.businessPhones?.[0] || baseProfile.phone;
-          baseProfile.officeLocation = graphProfile.officeLocation || baseProfile.officeLocation;
-        } else {
-          console.warn('Microsoft Graph responded with status:', graphResponse.status);
-        }
-      } catch (graphError) {
-        console.warn('Microsoft Graph request failed:', graphError.message);
-      }
-    } else {
-      console.warn('No access token available for Microsoft Graph');
-    }
+    const { principal, baseProfile, claims, graphProfile } = await fetchProfileData(req);
 
     res.json({
       profile: baseProfile,
@@ -200,8 +208,11 @@ app.get('/api/profile', async (req, res) => {
       graph: graphProfile
     });
   } catch (error) {
-    console.error('Profile API error:', error);
-    res.status(500).json({ error: 'Failed to get user profile' });
+    const status = error instanceof ProfileError ? error.status : 500;
+    if (!(error instanceof ProfileError)) {
+      console.error('Profile API error:', error);
+    }
+    res.status(status).json({ error: error.message || 'Failed to get user profile' });
   }
 });
 
@@ -293,13 +304,140 @@ app.get('/api/auth/me', async (req, res) => {
 });
 
 // API endpoint to update user profile
-app.post('/api/profile', express.json(), (req, res) => {
-  // Note: Azure AD user attributes are typically read-only for standard apps
-  // This endpoint would need Microsoft Graph API permissions to update user profiles
-  res.json({ 
-    message: 'Profile update received',
-    note: 'Azure AD profile updates require Microsoft Graph API integration'
-  });
+app.post('/api/profile', express.json(), async (req, res) => {
+  try {
+    const { principal, accessToken } = await fetchProfileData(req, { includeGraph: false });
+
+    if (!accessToken) {
+      return res.status(403).json({
+        error: 'Azure AD access token not available',
+        message: 'Enable Microsoft Graph delegated permissions (e.g., User.ReadWrite) in Azure App Service authentication.'
+      });
+    }
+
+    const {
+      firstName,
+      lastName,
+      department,
+      jobTitle,
+      officeLocation,
+      workPhone,
+      address,
+      city,
+      state,
+      zipCode,
+      phone
+    } = req.body || {};
+
+    const trimmed = (value) => typeof value === 'string' ? value.trim() : value;
+
+    const updatePayload = {};
+
+    const normalizedFirstName = trimmed(firstName);
+    const normalizedLastName = trimmed(lastName);
+
+    if (normalizedFirstName) {
+      updatePayload.givenName = normalizedFirstName;
+    }
+
+    if (normalizedLastName) {
+      updatePayload.surname = normalizedLastName;
+    }
+
+    if (normalizedFirstName || normalizedLastName) {
+      const displayName = [normalizedFirstName, normalizedLastName].filter(Boolean).join(' ');
+      if (displayName) {
+        updatePayload.displayName = displayName;
+      }
+    }
+
+    const normalizedDepartment = trimmed(department);
+    if (normalizedDepartment) {
+      updatePayload.department = normalizedDepartment;
+    }
+
+    const normalizedJobTitle = trimmed(jobTitle);
+    if (normalizedJobTitle) {
+      updatePayload.jobTitle = normalizedJobTitle;
+    }
+
+    const normalizedOffice = trimmed(officeLocation);
+    if (normalizedOffice) {
+      updatePayload.officeLocation = normalizedOffice;
+    }
+
+    if (workPhone !== undefined) {
+      const normalizedWorkPhone = trimmed(workPhone) || null;
+      updatePayload.businessPhones = normalizedWorkPhone ? [normalizedWorkPhone] : [];
+    }
+
+    const normalizedAddress = trimmed(address);
+    if (normalizedAddress) {
+      updatePayload.streetAddress = normalizedAddress;
+    }
+
+    const normalizedCity = trimmed(city);
+    if (normalizedCity) {
+      updatePayload.city = normalizedCity;
+    }
+
+    const normalizedState = trimmed(state);
+    if (normalizedState) {
+      updatePayload.state = normalizedState;
+    }
+
+    const normalizedZip = trimmed(zipCode);
+    if (normalizedZip) {
+      updatePayload.postalCode = normalizedZip;
+    }
+
+    if (phone !== undefined) {
+      const normalizedMobile = trimmed(phone) || null;
+      if (normalizedMobile) {
+        updatePayload.mobilePhone = normalizedMobile;
+      }
+    }
+
+    if (Object.keys(updatePayload).length === 0) {
+      return res.status(400).json({ error: 'No valid fields provided to update' });
+    }
+
+    const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(updatePayload)
+    });
+
+    if (!graphResponse.ok) {
+      const errorText = await graphResponse.text();
+      console.error('Microsoft Graph update failed:', graphResponse.status, errorText);
+      return res.status(graphResponse.status).json({
+        error: 'Failed to update Azure AD profile',
+        details: errorText
+      });
+    }
+
+    // Refresh profile after successful update
+    const refreshed = await fetchProfileData(req);
+
+    res.json({
+      message: 'Profile updated successfully',
+      profile: refreshed.baseProfile,
+      graph: refreshed.graphProfile,
+      authProvider: principal.identity_provider
+    });
+  } catch (error) {
+    const status = error instanceof ProfileError ? error.status : 500;
+    if (!(error instanceof ProfileError)) {
+      console.error('Profile update error:', error);
+    }
+    res.status(status).json({
+      error: error.message || 'Failed to update profile'
+    });
+  }
 });
 
 // Error handling middleware
