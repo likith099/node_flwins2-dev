@@ -640,20 +640,31 @@ class FLWINSApp {
         const profileBtn = document.getElementById('profile-btn');
         const profileMenu = document.getElementById('profile-menu');
 
-        if (!profileBtn || !profileMenu) return;
+    if (!profileBtn || !profileMenu) return;
+    if (profileBtn.dataset.dropdownInitialized === 'true') return;
+
+    profileBtn.dataset.dropdownInitialized = 'true';
 
         profileBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             
             const isExpanded = profileBtn.getAttribute('aria-expanded') === 'true';
-            profileBtn.setAttribute('aria-expanded', !isExpanded);
+            const nextState = !isExpanded;
+            profileBtn.setAttribute('aria-expanded', nextState);
+            profileMenu.classList.toggle('is-open', nextState);
+        });
+
+        // Prevent menu clicks from bubbling and auto-closing
+        profileMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
         });
 
         // Close profile menu when clicking outside
         document.addEventListener('click', (e) => {
             if (!profileBtn.contains(e.target) && !profileMenu.contains(e.target)) {
                 profileBtn.setAttribute('aria-expanded', 'false');
+                profileMenu.classList.remove('is-open');
             }
         });
 
@@ -661,6 +672,7 @@ class FLWINSApp {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 profileBtn.setAttribute('aria-expanded', 'false');
+                profileMenu.classList.remove('is-open');
             }
         });
     }

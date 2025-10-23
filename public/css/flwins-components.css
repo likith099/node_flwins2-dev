@@ -164,7 +164,8 @@
     transform: rotate(180deg);
 }
 
-.flwins-profile-btn[aria-expanded="true"] + .flwins-profile-menu {
+.flwins-profile-btn[aria-expanded="true"] + .flwins-profile-menu,
+.flwins-profile-menu.is-open {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
