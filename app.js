@@ -104,6 +104,11 @@ app.get('/api/profile', (req, res) => {
 // API endpoint to check authentication status
 app.get('/api/auth/status', (req, res) => {
   try {
+    console.log('Auth status check - Headers received:');
+    console.log('x-ms-client-principal:', req.headers['x-ms-client-principal'] ? 'Present' : 'Not present');
+    console.log('x-ms-client-principal-idp:', req.headers['x-ms-client-principal-idp']);
+    console.log('x-ms-client-principal-name:', req.headers['x-ms-client-principal-name']);
+    
     const clientPrincipal = req.headers['x-ms-client-principal'];
     const clientPrincipalIdp = req.headers['x-ms-client-principal-idp'];
     const clientPrincipalName = req.headers['x-ms-client-principal-name'];
@@ -112,7 +117,9 @@ app.get('/api/auth/status', (req, res) => {
       const decoded = Buffer.from(clientPrincipal, 'base64').toString('ascii');
       const userInfo = JSON.parse(decoded);
       
-      res.json({
+      console.log('Decoded user info:', userInfo);
+      
+      const response = {
         authenticated: true,
         user: {
           id: userInfo.userId || userInfo.sid,
@@ -120,8 +127,12 @@ app.get('/api/auth/status', (req, res) => {
           email: userInfo.claims?.find(c => c.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress')?.val,
           provider: clientPrincipalIdp || 'aad'
         }
-      });
+      };
+      
+      console.log('Sending authenticated response:', response);
+      res.json(response);
     } else {
+      console.log('No authentication headers found, sending unauthenticated response');
       res.json({
         authenticated: false,
         user: null
@@ -133,6 +144,46 @@ app.get('/api/auth/status', (req, res) => {
       error: 'Failed to check authentication status',
       authenticated: false 
     });
+  }
+});
+
+// Alternative auth endpoint using Azure's built-in endpoint
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    console.log('Auth me endpoint called');
+    
+    // Try the built-in Azure endpoint first
+    const authResponse = await fetch(`${req.protocol}://${req.get('host')}/.auth/me`, {
+      headers: {
+        'cookie': req.headers.cookie || ''
+      }
+    });
+    
+    if (authResponse.ok) {
+      const authData = await authResponse.json();
+      console.log('Azure auth response:', authData);
+      
+      if (authData && authData.length > 0 && authData[0].user_id) {
+        const userInfo = authData[0];
+        res.json({
+          authenticated: true,
+          user: {
+            id: userInfo.user_id,
+            name: userInfo.user_claims?.find(c => c.typ === 'name')?.val || userInfo.user_id,
+            email: userInfo.user_claims?.find(c => c.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress')?.val,
+            provider: userInfo.identity_provider || 'aad'
+          }
+        });
+      } else {
+        res.json({ authenticated: false, user: null });
+      }
+    } else {
+      console.log('Azure auth endpoint returned:', authResponse.status);
+      res.json({ authenticated: false, user: null });
+    }
+  } catch (error) {
+    console.error('Auth me error:', error);
+    res.json({ authenticated: false, user: null });
   }
 });
 

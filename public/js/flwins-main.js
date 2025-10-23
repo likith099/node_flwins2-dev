@@ -485,81 +485,182 @@ class FLWINSApp {
      * Authentication State Management
      */
     async setupAuthentication() {
+        console.log('🔐 Starting authentication check...');
+        
         try {
-            console.log('Checking authentication status...');
-            
-            // Use our new auth status endpoint
-            const response = await fetch('/api/auth/status', {
-                credentials: 'include',
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
-            
-            if (response.ok) {
-                const authData = await response.json();
-                console.log('Auth response:', authData);
-                
-                if (authData.authenticated && authData.user) {
-                    // User is authenticated
-                    this.handleAuthenticatedUser(authData.user);
-                } else {
-                    // User is not authenticated
+            // Try our custom auth status endpoint first
+            await this.tryAuthStatusEndpoint();
+        } catch (error) {
+            console.log('❌ Custom auth endpoint failed, trying Azure built-in endpoint...');
+            try {
+                await this.tryAzureAuthEndpoint();
+            } catch (error2) {
+                console.log('❌ Azure auth endpoint failed, trying direct .auth/me...');
+                try {
+                    await this.tryDirectAuthEndpoint();
+                } catch (error3) {
+                    console.log('❌ All authentication methods failed, showing anonymous user');
                     this.handleAnonymousUser();
                 }
-            } else {
-                console.log('Auth endpoint returned error:', response.status);
-                this.handleAnonymousUser();
             }
-        } catch (error) {
-            console.log('Authentication check failed, assuming anonymous user:', error);
+        }
+    }
+
+    async tryAuthStatusEndpoint() {
+        console.log('🔍 Trying /api/auth/status endpoint...');
+        const response = await fetch('/api/auth/status', {
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Auth status endpoint failed: ${response.status}`);
+        }
+        
+        const authData = await response.json();
+        console.log('✅ Auth status response:', authData);
+        
+        if (authData.authenticated && authData.user) {
+            this.handleAuthenticatedUser(authData.user);
+        } else {
+            this.handleAnonymousUser();
+        }
+    }
+
+    async tryAzureAuthEndpoint() {
+        console.log('🔍 Trying /api/auth/me endpoint...');
+        const response = await fetch('/api/auth/me', {
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Auth me endpoint failed: ${response.status}`);
+        }
+        
+        const authData = await response.json();
+        console.log('✅ Auth me response:', authData);
+        
+        if (authData.authenticated && authData.user) {
+            this.handleAuthenticatedUser(authData.user);
+        } else {
+            this.handleAnonymousUser();
+        }
+    }
+
+    async tryDirectAuthEndpoint() {
+        console.log('🔍 Trying /.auth/me endpoint directly...');
+        const response = await fetch('/.auth/me', {
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Direct auth endpoint failed: ${response.status}`);
+        }
+        
+        const authData = await response.json();
+        console.log('✅ Direct auth response:', authData);
+        
+        if (authData && authData.length > 0 && authData[0].user_id) {
+            const userInfo = authData[0];
+            const user = {
+                id: userInfo.user_id,
+                name: userInfo.user_claims?.find(c => c.typ === 'name')?.val || userInfo.user_id,
+                email: userInfo.user_claims?.find(c => c.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress')?.val,
+                provider: userInfo.identity_provider || 'aad'
+            };
+            this.handleAuthenticatedUser(user);
+        } else {
             this.handleAnonymousUser();
         }
     }
 
     handleAuthenticatedUser(userInfo) {
-        console.log('User authenticated:', userInfo);
+        console.log('👤 User authenticated:', userInfo);
         
         const anonymousActions = document.getElementById('anonymous-actions');
         const authenticatedActions = document.getElementById('authenticated-actions');
         const profileNameElement = document.getElementById('profile-name');
 
+        console.log('🔍 DOM elements found:');
+        console.log('- anonymous-actions:', anonymousActions ? 'Found' : 'NOT FOUND');
+        console.log('- authenticated-actions:', authenticatedActions ? 'Found' : 'NOT FOUND');
+        console.log('- profile-name:', profileNameElement ? 'Found' : 'NOT FOUND');
+
         if (anonymousActions) {
             anonymousActions.style.display = 'none';
-            console.log('Hidden anonymous actions');
+            console.log('✅ Hidden anonymous actions');
+        } else {
+            console.log('❌ Could not find anonymous-actions element');
         }
+        
         if (authenticatedActions) {
             authenticatedActions.style.display = 'flex';
-            console.log('Shown authenticated actions');
+            console.log('✅ Shown authenticated actions');
+        } else {
+            console.log('❌ Could not find authenticated-actions element');
         }
         
         if (profileNameElement) {
-            const displayName = userInfo.name || userInfo.email || 'User';
+            const displayName = userInfo.name || userInfo.email || userInfo.id || 'User';
             // Extract first name or part before @ for email
             const shortName = displayName.includes('@') ? 
                 displayName.split('@')[0] : 
                 displayName.split(' ')[0];
             profileNameElement.textContent = shortName;
-            console.log('Set profile name to:', shortName);
+            console.log('✅ Set profile name to:', shortName);
+        } else {
+            console.log('❌ Could not find profile-name element');
         }
 
         // Setup profile dropdown
         this.setupProfileDropdown();
+        
+        // Force a DOM refresh
+        setTimeout(() => {
+            console.log('🔄 Forcing DOM refresh...');
+            const navActions = document.getElementById('nav-actions');
+            if (navActions) {
+                navActions.style.display = 'none';
+                navActions.offsetHeight; // Force reflow
+                navActions.style.display = '';
+                console.log('✅ DOM refresh completed');
+            }
+        }, 100);
     }
 
     handleAnonymousUser() {
-        console.log('User not authenticated, showing anonymous actions');
+        console.log('👤 User not authenticated, showing anonymous actions');
         
         const anonymousActions = document.getElementById('anonymous-actions');
         const authenticatedActions = document.getElementById('authenticated-actions');
 
+        console.log('🔍 DOM elements found:');
+        console.log('- anonymous-actions:', anonymousActions ? 'Found' : 'NOT FOUND');
+        console.log('- authenticated-actions:', authenticatedActions ? 'Found' : 'NOT FOUND');
+
         if (anonymousActions) {
             anonymousActions.style.display = 'flex';
-            console.log('Shown anonymous actions');
+            console.log('✅ Shown anonymous actions');
+        } else {
+            console.log('❌ Could not find anonymous-actions element');
         }
+        
         if (authenticatedActions) {
             authenticatedActions.style.display = 'none';
-            console.log('Hidden authenticated actions');
+            console.log('✅ Hidden authenticated actions');
+        } else {
+            console.log('❌ Could not find authenticated-actions element');
         }
     }
 
@@ -590,6 +691,12 @@ class FLWINSApp {
                 profileBtn.setAttribute('aria-expanded', 'false');
             }
         });
+    }
+
+    // Manual authentication refresh for debugging
+    async refreshAuthentication() {
+        console.log('🔄 Manual authentication refresh triggered...');
+        await this.setupAuthentication();
     }
 }
 
@@ -650,5 +757,11 @@ document.addEventListener('DOMContentLoaded', () => {
     window.FLWINSApp = app;
     window.FLWINSUtils = FLWINSUtils;
     
+    // Make auth refresh function globally available for testing
+    window.refreshAuth = () => app.refreshAuthentication();
+    
     console.log('FL WINS application initialized successfully');
+    console.log('💡 Debug commands available:');
+    console.log('- window.refreshAuth() - Manually refresh authentication');
+    console.log('- window.FLWINSApp - Access to main app instance');
 });
