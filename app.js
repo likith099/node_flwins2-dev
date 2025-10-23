@@ -66,27 +66,33 @@ app.get('/flwins.html', (req, res) => {
   res.sendFile(__dirname + '/public/flwins.html');
 });
 
+// Handle the incorrect redirect URL - redirect to flwins.html
+app.get('/flwins2.html', (req, res) => {
+  res.redirect('/flwins.html');
+});
+
 // Profile page route
 app.get('/profile', (req, res) => {
   res.sendFile(__dirname + '/public/profile.html');
 });
 
 // API endpoint to get user profile
-app.get('/api/profile', async (req, res) => {
+app.get('/api/profile', (req, res) => {
   try {
-    // Get user info from Azure AD
-    const authResponse = await fetch(`${req.protocol}://${req.get('host')}/.auth/me`);
+    // For Azure App Service, the user info is available in headers
+    const clientPrincipal = req.headers['x-ms-client-principal'];
     
-    if (authResponse.ok) {
-      const authData = await authResponse.json();
-      if (authData && authData.length > 0) {
-        const userInfo = authData[0];
-        res.json({ user: userInfo });
-      } else {
-        res.status(401).json({ error: 'User not authenticated' });
-      }
+    if (clientPrincipal) {
+      // Decode the base64 encoded client principal
+      const decoded = Buffer.from(clientPrincipal, 'base64').toString('ascii');
+      const userInfo = JSON.parse(decoded);
+      res.json({ user: userInfo });
     } else {
-      res.status(401).json({ error: 'Authentication check failed' });
+      // Return a message indicating no authentication info available
+      res.status(401).json({ 
+        error: 'User not authenticated',
+        message: 'No Azure authentication headers found'
+      });
     }
   } catch (error) {
     console.error('Profile API error:', error);

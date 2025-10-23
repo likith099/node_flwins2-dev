@@ -533,13 +533,15 @@ const FLWINSUtils = {
      */
     async setupAuthentication() {
         try {
-            // Check if user is authenticated by calling Azure App Service auth endpoint
-            const response = await fetch('/.auth/me');
+            // First try to check if we have authentication headers
+            const response = await fetch('/.auth/me', {
+                credentials: 'include'
+            });
             
             if (response.ok) {
                 const authData = await response.json();
                 
-                if (authData && authData.length > 0) {
+                if (authData && authData.length > 0 && authData[0].user_id) {
                     // User is authenticated
                     this.handleAuthenticatedUser(authData[0]);
                 } else {
@@ -551,30 +553,44 @@ const FLWINSUtils = {
                 this.handleAnonymousUser();
             }
         } catch (error) {
-            console.log('Authentication check failed, assuming anonymous user');
+            console.log('Authentication check failed, assuming anonymous user:', error);
             this.handleAnonymousUser();
         }
     },
 
     handleAuthenticatedUser(userInfo) {
+        console.log('User authenticated:', userInfo);
+        
         const anonymousActions = document.getElementById('anonymous-actions');
         const authenticatedActions = document.getElementById('authenticated-actions');
         const profileNameElement = document.getElementById('profile-name');
 
-        if (anonymousActions) anonymousActions.style.display = 'none';
-        if (authenticatedActions) authenticatedActions.style.display = 'flex';
+        if (anonymousActions) {
+            anonymousActions.style.display = 'none';
+            console.log('Hidden anonymous actions');
+        }
+        if (authenticatedActions) {
+            authenticatedActions.style.display = 'flex';
+            console.log('Shown authenticated actions');
+        }
         
         if (profileNameElement && userInfo.user_claims) {
             // Extract user name from claims
             const nameClaim = userInfo.user_claims.find(claim => 
-                claim.typ === 'name' || claim.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'
+                claim.typ === 'name' || 
+                claim.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name' ||
+                claim.typ === 'http://schemas.microsoft.com/identity/claims/displayname'
             );
             const emailClaim = userInfo.user_claims.find(claim => 
-                claim.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'
+                claim.typ === 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress' ||
+                claim.typ === 'email'
             );
             
-            const displayName = nameClaim?.val || emailClaim?.val || 'User';
+            const displayName = nameClaim?.val || emailClaim?.val || userInfo.user_id || 'User';
             profileNameElement.textContent = displayName.split('@')[0];
+            console.log('Set profile name to:', displayName.split('@')[0]);
+        } else if (profileNameElement) {
+            profileNameElement.textContent = userInfo.user_id || 'User';
         }
 
         // Setup profile dropdown
@@ -582,11 +598,19 @@ const FLWINSUtils = {
     },
 
     handleAnonymousUser() {
+        console.log('User not authenticated, showing anonymous actions');
+        
         const anonymousActions = document.getElementById('anonymous-actions');
         const authenticatedActions = document.getElementById('authenticated-actions');
 
-        if (anonymousActions) anonymousActions.style.display = 'flex';
-        if (authenticatedActions) authenticatedActions.style.display = 'none';
+        if (anonymousActions) {
+            anonymousActions.style.display = 'flex';
+            console.log('Shown anonymous actions');
+        }
+        if (authenticatedActions) {
+            authenticatedActions.style.display = 'none';
+            console.log('Hidden authenticated actions');
+        }
     },
 
     setupProfileDropdown() {
