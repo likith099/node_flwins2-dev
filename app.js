@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const fetch = globalThis.fetch || ((...args) => import('node-fetch').then(({ default: fetchFn }) => fetchFn(...args)));
+const { ensureIntakeTable, upsertIntakeForm } = require('./config/database');
 require('dotenv').config();
 
 const app = express();
@@ -21,6 +22,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from public directory
 app.use(express.static('public'));
+
+// Ensure database schema (best effort)
+if (process.env.SQL_SERVER || process.env.SQL_CONNECTION_STRING) {
+  ensureIntakeTable().catch((err) => {
+    console.error('Failed to ensure intake table:', err.message);
+  });
+}
 
 // Routes
 app.get('/', (req, res) => {
@@ -304,138 +312,56 @@ app.get('/api/auth/me', async (req, res) => {
 });
 
 // API endpoint to update user profile
-app.post('/api/profile', express.json(), async (req, res) => {
+app.post('/api/intake', express.json(), async (req, res) => {
   try {
-    const { principal, accessToken } = await fetchProfileData(req, { includeGraph: false });
+    const { principal, baseProfile } = await fetchProfileData(req, { includeGraph: false });
 
-    if (!accessToken) {
-      return res.status(403).json({
-        error: 'Azure AD access token not available',
-        message: 'Enable Microsoft Graph delegated permissions (e.g., User.ReadWrite) in Azure App Service authentication.'
-      });
+    if (!process.env.SQL_SERVER && !process.env.SQL_CONNECTION_STRING) {
+      return res.status(500).json({ error: 'SQL Database configuration missing on server.' });
     }
 
-    const {
+    const body = req.body || {};
+    const sanitize = (value, maxLength = 4000) => {
+      if (typeof value !== 'string') return null;
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      return trimmed.length > maxLength ? trimmed.slice(0, maxLength) : trimmed;
+    };
+
+    const firstName = sanitize(body.firstName, 150) || baseProfile.firstName;
+    const lastName = sanitize(body.lastName, 150) || baseProfile.lastName;
+    const email = baseProfile.email || sanitize(body.email, 256);
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required.' });
+    }
+
+    await upsertIntakeForm({
+      userId: principal.user_id,
+      email,
       firstName,
       lastName,
-      department,
-      jobTitle,
-      officeLocation,
-      workPhone,
-      address,
-      city,
-      state,
-      zipCode,
-      phone
-    } = req.body || {};
-
-    const trimmed = (value) => typeof value === 'string' ? value.trim() : value;
-
-    const updatePayload = {};
-
-    const normalizedFirstName = trimmed(firstName);
-    const normalizedLastName = trimmed(lastName);
-
-    if (normalizedFirstName) {
-      updatePayload.givenName = normalizedFirstName;
-    }
-
-    if (normalizedLastName) {
-      updatePayload.surname = normalizedLastName;
-    }
-
-    if (normalizedFirstName || normalizedLastName) {
-      const displayName = [normalizedFirstName, normalizedLastName].filter(Boolean).join(' ');
-      if (displayName) {
-        updatePayload.displayName = displayName;
-      }
-    }
-
-    const normalizedDepartment = trimmed(department);
-    if (normalizedDepartment) {
-      updatePayload.department = normalizedDepartment;
-    }
-
-    const normalizedJobTitle = trimmed(jobTitle);
-    if (normalizedJobTitle) {
-      updatePayload.jobTitle = normalizedJobTitle;
-    }
-
-    const normalizedOffice = trimmed(officeLocation);
-    if (normalizedOffice) {
-      updatePayload.officeLocation = normalizedOffice;
-    }
-
-    if (workPhone !== undefined) {
-      const normalizedWorkPhone = trimmed(workPhone) || null;
-      updatePayload.businessPhones = normalizedWorkPhone ? [normalizedWorkPhone] : [];
-    }
-
-    const normalizedAddress = trimmed(address);
-    if (normalizedAddress) {
-      updatePayload.streetAddress = normalizedAddress;
-    }
-
-    const normalizedCity = trimmed(city);
-    if (normalizedCity) {
-      updatePayload.city = normalizedCity;
-    }
-
-    const normalizedState = trimmed(state);
-    if (normalizedState) {
-      updatePayload.state = normalizedState;
-    }
-
-    const normalizedZip = trimmed(zipCode);
-    if (normalizedZip) {
-      updatePayload.postalCode = normalizedZip;
-    }
-
-    if (phone !== undefined) {
-      const normalizedMobile = trimmed(phone) || null;
-      if (normalizedMobile) {
-        updatePayload.mobilePhone = normalizedMobile;
-      }
-    }
-
-    if (Object.keys(updatePayload).length === 0) {
-      return res.status(400).json({ error: 'No valid fields provided to update' });
-    }
-
-    const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(updatePayload)
+      department: sanitize(body.department, 150),
+      jobTitle: sanitize(body.jobTitle, 150),
+      officeLocation: sanitize(body.officeLocation, 150),
+      workPhone: sanitize(body.workPhone, 50),
+      address: sanitize(body.address, 500),
+      city: sanitize(body.city, 150),
+      state: sanitize(body.state, 50),
+      zipCode: sanitize(body.zipCode, 20),
+      phone: sanitize(body.phone, 50)
     });
 
-    if (!graphResponse.ok) {
-      const errorText = await graphResponse.text();
-      console.error('Microsoft Graph update failed:', graphResponse.status, errorText);
-      return res.status(graphResponse.status).json({
-        error: 'Failed to update Azure AD profile',
-        details: errorText
-      });
-    }
-
-    // Refresh profile after successful update
-    const refreshed = await fetchProfileData(req);
-
     res.json({
-      message: 'Profile updated successfully',
-      profile: refreshed.baseProfile,
-      graph: refreshed.graphProfile,
-      authProvider: principal.identity_provider
+      message: 'Intake form saved successfully.'
     });
   } catch (error) {
     const status = error instanceof ProfileError ? error.status : 500;
     if (!(error instanceof ProfileError)) {
-      console.error('Profile update error:', error);
+      console.error('Intake form submission error:', error);
     }
     res.status(status).json({
-      error: error.message || 'Failed to update profile'
+      error: error.message || 'Failed to submit intake form.'
     });
   }
 });

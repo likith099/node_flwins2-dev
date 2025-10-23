@@ -107,7 +107,7 @@
             <div class="flwins-container">
                 <div class="flwins-profile-header">
                     <h1 class="flwins-profile-title">My Profile</h1>
-                    <p class="flwins-profile-subtitle">Manage your personal information and preferences</p>
+                    <p class="flwins-profile-subtitle">Review your account info and complete the common intake form.</p>
                 </div>
                 
                 <div class="flwins-profile-content">
@@ -121,27 +121,46 @@
                             <h2 class="flwins-profile-user-name" id="profile-display-name">Loading...</h2>
                         </div>
                         
-                        <form class="flwins-profile-form" id="profile-form">
+                        <div class="flwins-profile-form">
                             <div class="flwins-form-section">
-                                <h3 class="flwins-form-section-title">Basic Information</h3>
-                                <p class="flwins-form-section-note">Information synced with Azure Active Directory</p>
-                                
+                                <h3 class="flwins-form-section-title">Account Information</h3>
+                                <p class="flwins-form-section-note">This information comes from Azure Active Directory.</p>
+
+                                <div class="flwins-form-group">
+                                    <label class="flwins-form-label" for="readonly-name">Name</label>
+                                    <input id="readonly-name" class="flwins-form-input" type="text" value="Loading..." readonly>
+                                </div>
+
+                                <div class="flwins-form-group">
+                                    <label class="flwins-form-label" for="readonly-email">Email</label>
+                                    <input id="readonly-email" class="flwins-form-input" type="email" value="Loading..." readonly>
+                                </div>
+
+                                <button id="intake-form-toggle" class="flwins-btn flwins-btn-primary" type="button" aria-controls="intake-form" aria-expanded="false">
+                                    Open Common Intake Form
+                                </button>
+                            </div>
+
+                            <form id="intake-form" class="flwins-form-section" hidden>
+                                <h3 class="flwins-form-section-title">Common Intake Form</h3>
+                                <p class="flwins-form-section-note">Review your details and complete any missing fields. Submissions are stored securely in FL WINS.</p>
+
                                 <div class="flwins-form-row">
                                     <div class="flwins-form-group">
                                         <label for="firstName" class="flwins-form-label">First Name</label>
-                                        <input type="text" id="firstName" name="firstName" class="flwins-form-input">
+                                        <input type="text" id="firstName" name="firstName" class="flwins-form-input" required>
                                     </div>
                                     <div class="flwins-form-group">
                                         <label for="lastName" class="flwins-form-label">Last Name</label>
-                                        <input type="text" id="lastName" name="lastName" class="flwins-form-input">
+                                        <input type="text" id="lastName" name="lastName" class="flwins-form-input" required>
                                     </div>
                                 </div>
-                                
+
                                 <div class="flwins-form-group">
                                     <label for="email" class="flwins-form-label">Email Address</label>
-                                    <input type="email" id="email" name="email" class="flwins-form-input" readonly>
+                                    <input type="email" id="email" name="email" class="flwins-form-input" required readonly>
                                 </div>
-                                
+
                                 <div class="flwins-form-group">
                                     <label for="department" class="flwins-form-label">Department</label>
                                     <input type="text" id="department" name="department" class="flwins-form-input">
@@ -162,17 +181,12 @@
                                     <label for="workPhone" class="flwins-form-label">Work Phone</label>
                                     <input type="tel" id="workPhone" name="workPhone" class="flwins-form-input">
                                 </div>
-                            </div>
-                            
-                            <div class="flwins-form-section">
-                                <h3 class="flwins-form-section-title">Additional Information</h3>
-                                <p class="flwins-form-section-note">You can update these fields</p>
-                                
+
                                 <div class="flwins-form-group">
-                                    <label for="address" class="flwins-form-label">Address</label>
+                                    <label for="address" class="flwins-form-label">Mailing Address</label>
                                     <textarea id="address" name="address" class="flwins-form-textarea" rows="3" placeholder="Enter your address"></textarea>
                                 </div>
-                                
+
                                 <div class="flwins-form-row">
                                     <div class="flwins-form-group">
                                         <label for="city" class="flwins-form-label">City</label>
@@ -185,7 +199,6 @@
                                             <option value="FL">Florida</option>
                                             <option value="AL">Alabama</option>
                                             <option value="GA">Georgia</option>
-                                            <!-- Add more states as needed -->
                                         </select>
                                     </div>
                                     <div class="flwins-form-group">
@@ -193,18 +206,18 @@
                                         <input type="text" id="zipCode" name="zipCode" class="flwins-form-input" placeholder="Enter ZIP code">
                                     </div>
                                 </div>
-                                
+
                                 <div class="flwins-form-group">
-                                    <label for="phone" class="flwins-form-label">Phone Number</label>
+                                    <label for="phone" class="flwins-form-label">Primary Phone Number</label>
                                     <input type="tel" id="phone" name="phone" class="flwins-form-input" placeholder="Enter phone number">
                                 </div>
-                            </div>
-                            
-                            <div class="flwins-form-actions">
-                                <button type="submit" class="flwins-btn flwins-btn-primary">Update Profile</button>
-                                <a href="/" class="flwins-btn flwins-btn-secondary">Cancel</a>
-                            </div>
-                        </form>
+
+                                <div class="flwins-form-actions">
+                                    <button type="submit" class="flwins-btn flwins-btn-primary">Submit Intake Form</button>
+                                    <button type="button" class="flwins-btn flwins-btn-secondary" id="intake-form-cancel">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,16 +1,26 @@
 /**
  * Profile Page JavaScript
- * Handles profile data loading and form submission
+ * Handles profile data loading and intake submission
  */
 
 class ProfileManager {
     constructor() {
+        this.form = document.getElementById('intake-form');
+        this.toggleButton = document.getElementById('intake-form-toggle');
+        this.cancelButton = document.getElementById('intake-form-cancel');
+        this.readonlyName = document.getElementById('readonly-name');
+        this.readonlyEmail = document.getElementById('readonly-email');
+        this.displayNameElement = document.getElementById('profile-display-name');
+        this.profile = null;
+        if (this.toggleButton) {
+            this.toggleButton.setAttribute('aria-expanded', 'false');
+        }
         this.init();
     }
 
     async init() {
         await this.loadUserProfile();
-        this.setupFormHandlers();
+        this.setupEventHandlers();
     }
 
     async loadUserProfile() {
@@ -18,180 +28,164 @@ class ProfileManager {
             const response = await fetch('/api/profile', {
                 credentials: 'include',
                 headers: {
-                    'Accept': 'application/json'
+                    Accept: 'application/json'
                 }
             });
-            
-            if (response.ok) {
-                const data = await response.json();
-                this.populateProfile(data.profile, data.claims, data.graph);
-            } else if (response.status === 401) {
-                console.warn('User not authenticated when loading profile');
-                this.showError('Please sign in to view your profile.');
-            } else {
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    this.showError('Please sign in to view your profile.');
+                    return;
+                }
                 const errorText = await response.text();
                 console.error('Failed to load user profile', errorText);
-                this.showError('Failed to load profile information');
+                this.showError('Failed to load profile information.');
+                return;
             }
+
+            const data = await response.json();
+            this.populateProfile(data.profile);
         } catch (error) {
             console.error('Profile loading error:', error);
-            this.showError('Error loading profile information');
+            this.showError('Error loading profile information.');
         }
     }
 
-    populateProfile(profileData = {}, claims = [], graphProfile = null) {
+    populateProfile(profileData = {}) {
         if (!profileData || typeof profileData !== 'object') {
-            console.error('Invalid profile data received');
             this.showError('Unable to display profile details.');
             return;
         }
 
-        this.claims = claims;
-        this.graphProfile = graphProfile;
+        this.profile = profileData;
 
-        const displayName = profileData.displayName || profileData.email || 'User';
-        const displayNameElement = document.getElementById('profile-display-name');
-        if (displayNameElement) {
-            displayNameElement.textContent = displayName;
+        const displayName = profileData.displayName || `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim() || profileData.email || 'User';
+        const email = profileData.email || '';
+
+        if (this.displayNameElement) {
+            this.displayNameElement.textContent = displayName || 'User';
         }
 
-        const fieldsToReset = ['firstName', 'lastName', 'department', 'jobTitle', 'officeLocation', 'workPhone', 'address', 'city', 'state', 'zipCode', 'phone'];
-        fieldsToReset.forEach((field) => this.setFieldValue(field, ''));
-
-        this.setFieldValue('firstName', profileData.firstName);
-        this.setFieldValue('lastName', profileData.lastName);
-        this.setFieldValue('email', profileData.email);
-        this.setFieldValue('department', profileData.department);
-        this.setFieldValue('jobTitle', profileData.jobTitle);
-        this.setFieldValue('officeLocation', profileData.officeLocation);
-        this.setFieldValue('workPhone', profileData.workPhone || profileData.phone);
-        this.setFieldValue('address', profileData.address);
-        this.setFieldValue('city', profileData.city);
-        this.setFieldValue('state', profileData.state);
-        this.setFieldValue('zipCode', profileData.zipCode);
-        this.setFieldValue('phone', profileData.phone);
-
-        // Pre-fill editable phone field with work phone if available
-        const editablePhone = document.getElementById('phone');
-        if (editablePhone && profileData.phone && !editablePhone.value) {
-            editablePhone.value = profileData.phone;
+        if (this.readonlyName) {
+            this.readonlyName.value = displayName || 'Not available';
         }
 
-        // Load additional profile data from local storage or API
-        this.loadAdditionalInfo({
+        if (this.readonlyEmail) {
+            this.readonlyEmail.value = email || 'Not available';
+        }
+
+        this.prefillIntakeForm(profileData);
+    }
+
+    prefillIntakeForm(profileData) {
+        if (!this.form) {
+            return;
+        }
+
+        const fields = {
+            firstName: profileData.firstName,
+            lastName: profileData.lastName,
+            email: profileData.email,
+            department: profileData.department,
+            jobTitle: profileData.jobTitle,
+            officeLocation: profileData.officeLocation,
+            workPhone: profileData.workPhone || profileData.phone,
             address: profileData.address,
             city: profileData.city,
             state: profileData.state,
             zipCode: profileData.zipCode,
-            phone: editablePhone?.value || profileData.phone
+            phone: profileData.phone
+        };
+
+        Object.entries(fields).forEach(([fieldId, value]) => {
+            const element = document.getElementById(fieldId);
+            if (element) {
+                element.value = value ?? '';
+            }
         });
-    }
 
-    setFieldValue(fieldId, value) {
-        const element = document.getElementById(fieldId);
-        if (element) {
-            element.value = value ?? '';
-        }
-    }
-
-    loadAdditionalInfo(defaultValues = {}) {
-        // Apply default values provided (e.g., from Azure profile)
-        if (defaultValues && typeof defaultValues === 'object') {
-            if (defaultValues.address !== undefined) {
-                this.setFieldValue('address', defaultValues.address);
-            }
-            if (defaultValues.city !== undefined) {
-                this.setFieldValue('city', defaultValues.city);
-            }
-            if (defaultValues.state !== undefined) {
-                this.setFieldValue('state', defaultValues.state);
-            }
-            if (defaultValues.zipCode !== undefined) {
-                this.setFieldValue('zipCode', defaultValues.zipCode);
-            }
-            if (defaultValues.phone !== undefined) {
-                this.setFieldValue('phone', defaultValues.phone);
-            }
-        }
-
-        // Load additional profile information from localStorage
-        const savedProfile = localStorage.getItem('flwins-profile');
-        if (savedProfile) {
-            try {
-                const profile = JSON.parse(savedProfile);
-                if (profile.address) this.setFieldValue('address', profile.address);
-                if (profile.city) this.setFieldValue('city', profile.city);
-                if (profile.state) this.setFieldValue('state', profile.state);
-                if (profile.zipCode) this.setFieldValue('zipCode', profile.zipCode);
-                if (profile.phone) this.setFieldValue('phone', profile.phone);
-            } catch (error) {
-                console.error('Error loading saved profile data:', error);
+        const emailInput = document.getElementById('email');
+        if (emailInput) {
+            if (profileData.email) {
+                emailInput.setAttribute('readonly', 'readonly');
+            } else {
+                emailInput.removeAttribute('readonly');
             }
         }
     }
 
-    setupFormHandlers() {
-        const form = document.getElementById('profile-form');
-        if (form) {
-            form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+    setupEventHandlers() {
+        if (this.toggleButton) {
+            this.toggleButton.addEventListener('click', () => this.toggleIntakeForm());
+        }
+
+        if (this.cancelButton) {
+            this.cancelButton.addEventListener('click', () => this.toggleIntakeForm(false));
+        }
+
+        if (this.form) {
+            this.form.addEventListener('submit', (event) => this.handleFormSubmit(event));
+        }
+    }
+
+    toggleIntakeForm(forceState) {
+        if (!this.form || !this.toggleButton) {
+            return;
+        }
+
+        const isHidden = this.form.hasAttribute('hidden');
+        const shouldShow = typeof forceState === 'boolean' ? forceState : isHidden;
+
+        if (shouldShow) {
+            this.prefillIntakeForm(this.profile || {});
+            this.form.removeAttribute('hidden');
+            this.toggleButton.setAttribute('aria-expanded', 'true');
+            this.toggleButton.textContent = 'Hide Common Intake Form';
+        } else {
+            this.form.setAttribute('hidden', 'hidden');
+            this.toggleButton.setAttribute('aria-expanded', 'false');
+            this.toggleButton.textContent = 'Open Common Intake Form';
         }
     }
 
     async handleFormSubmit(event) {
         event.preventDefault();
-        
-        const formData = new FormData(event.target);
-        const profileData = {
-            firstName: formData.get('firstName')?.trim() || '',
-            lastName: formData.get('lastName')?.trim() || '',
-            department: formData.get('department')?.trim() || '',
-            jobTitle: formData.get('jobTitle')?.trim() || '',
-            officeLocation: formData.get('officeLocation')?.trim() || '',
-            workPhone: formData.get('workPhone')?.trim() || '',
-            address: formData.get('address')?.trim() || '',
-            city: formData.get('city')?.trim() || '',
-            state: formData.get('state')?.trim() || '',
-            zipCode: formData.get('zipCode')?.trim() || '',
-            phone: formData.get('phone')?.trim() || ''
-        };
 
+        if (!this.form) {
+            return;
+        }
+
+        const formData = new FormData(this.form);
         const payload = {};
-        Object.entries(profileData).forEach(([key, value]) => {
-            if (value !== null && value !== undefined) {
-                payload[key] = value;
+
+        for (const [key, value] of formData.entries()) {
+            if (typeof value === 'string') {
+                payload[key] = value.trim();
             }
-        });
+        }
 
         try {
-            // Save to localStorage (since Azure AD fields are read-only)
-            localStorage.setItem('flwins-profile', JSON.stringify({
-                address: profileData.address,
-                city: profileData.city,
-                state: profileData.state,
-                zipCode: profileData.zipCode,
-                phone: profileData.phone
-            }));
-
-            const response = await fetch('/api/profile', {
+            const response = await fetch('/api/intake', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json'
+                    Accept: 'application/json'
                 },
                 credentials: 'include',
                 body: JSON.stringify(payload)
             });
 
-            if (response.ok) {
-                this.showSuccess('Profile updated successfully!');
-                await this.loadUserProfile();
-            } else {
+            if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                this.showError(errorData.message || errorData.error || 'Failed to update profile on server.');
+                this.showError(errorData.error || 'Failed to submit intake form.');
+                return;
             }
+
+            this.showSuccess('Intake form submitted successfully.');
+            this.toggleIntakeForm(false);
         } catch (error) {
-            console.error('Profile update error:', error);
-            this.showError('Error updating profile. Changes saved locally.');
+            console.error('Intake submission error:', error);
+            this.showError('An unexpected error occurred while submitting the form.');
         }
     }
 
@@ -204,12 +198,10 @@ class ProfileManager {
     }
 
     showNotification(message, type) {
-        // Create notification element
         const notification = document.createElement('div');
         notification.className = `flwins-notification flwins-notification-${type}`;
         notification.textContent = message;
-        
-        // Style the notification
+
         notification.style.cssText = `
             position: fixed;
             top: 20px;
@@ -227,24 +219,19 @@ class ProfileManager {
 
         document.body.appendChild(notification);
 
-        // Animate in
         setTimeout(() => {
             notification.style.transform = 'translateX(0)';
         }, 100);
 
-        // Remove after 5 seconds
         setTimeout(() => {
             notification.style.transform = 'translateX(100%)';
             setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
+                notification.remove();
             }, 300);
         }, 5000);
     }
 }
 
-// Initialize profile manager when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     new ProfileManager();
 });
