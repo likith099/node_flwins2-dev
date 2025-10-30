@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apply for School Readiness</title>
+    <meta name="description" content="Apply for Florida's School Readiness Program">
+    <link rel="stylesheet" href="/css/flwins-styles.css">
+    <link rel="stylesheet" href="/css/flwins-components.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+</head>
+<body>
+    <!-- Header (reuse site header markup from profile.html) -->
+    <header class="flwins-header" role="banner">
+        <div class="flwins-header-top">
+            <div class="flwins-container">
+                <div class="flwins-header-top-content">
+                    <div class="flwins-logo">
+                        <a href="/" aria-label="FL WINS Home">
+                            <img src="/images/FLWinsLogo.png" alt="FL WINS" width="120" height="60">
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main role="main" id="main">
+        <section class="flwins-profile-section">
+            <div class="flwins-container">
+                <div class="flwins-profile-header">
+                    <h1 class="flwins-profile-title">Apply for School Readiness</h1>
+                    <p class="flwins-profile-subtitle">Florida’s School Readiness Program (SR) offers financial assistance to eligible low-income families for early education and care so they can become financially self-sufficient and their young children can be successful in school.</p>
+                </div>
+
+                <div class="flwins-profile-content">
+                    <div class="flwins-profile-card">
+                        <div class="flwins-profile-avatar">
+                            <div class="flwins-avatar-circle">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 7.5V5.5C15 4.7 14.3 4 13.5 4H10.5C9.7 4 9 4.7 9 5.5V7.5L3 7V9L9 8.5V18C9 18.6 9.4 19 10 19H14C14.6 19 15 18.6 15 18V8.5L21 9Z"/>
+                                </svg>
+                            </div>
+                            <h2 class="flwins-profile-user-name" id="profile-display-name">Loading...</h2>
+                        </div>
+
+                        <!-- Common Intake Form -->
+                        <form id="intake-form" class="flwins-form-section">
+                            <h3 class="flwins-form-section-title">Common Intake Form — School Readiness</h3>
+                            <p class="flwins-form-section-note">Verify your details and add any missing information. Submissions are stored securely in FL WINS.</p>
+
+                            <div class="flwins-form-row">
+                                <div class="flwins-form-group">
+                                    <label for="firstName" class="flwins-form-label">First Name</label>
+                                    <input type="text" id="firstName" name="firstName" class="flwins-form-input" required>
+                                </div>
+                                <div class="flwins-form-group">
+                                    <label for="lastName" class="flwins-form-label">Last Name</label>
+                                    <input type="text" id="lastName" name="lastName" class="flwins-form-input" required>
+                                </div>
+                            </div>
+
+                            <div class="flwins-form-group">
+                                <label for="email" class="flwins-form-label">Email Address</label>
+                                <input type="email" id="email" name="email" class="flwins-form-input" required readonly>
+                            </div>
+
+                            <div class="flwins-form-group">
+                                <label for="department" class="flwins-form-label">Department</label>
+                                <input type="text" id="department" name="department" class="flwins-form-input">
+                            </div>
+
+                            <div class="flwins-form-row">
+                                <div class="flwins-form-group">
+                                    <label for="jobTitle" class="flwins-form-label">Job Title</label>
+                                    <input type="text" id="jobTitle" name="jobTitle" class="flwins-form-input">
+                                </div>
+                                <div class="flwins-form-group">
+                                    <label for="officeLocation" class="flwins-form-label">Office Location</label>
+                                    <input type="text" id="officeLocation" name="officeLocation" class="flwins-form-input">
+                                </div>
+                            </div>
+
+                            <div class="flwins-form-group">
+                                <label for="workPhone" class="flwins-form-label">Work Phone</label>
+                                <input type="tel" id="workPhone" name="workPhone" class="flwins-form-input">
+                            </div>
+
+                            <div class="flwins-form-group">
+                                <label for="address" class="flwins-form-label">Mailing Address</label>
+                                <textarea id="address" name="address" class="flwins-form-textarea" rows="3" placeholder="Enter your address"></textarea>
+                            </div>
+
+                            <div class="flwins-form-row">
+                                <div class="flwins-form-group">
+                                    <label for="city" class="flwins-form-label">City</label>
+                                    <input type="text" id="city" name="city" class="flwins-form-input" placeholder="Enter city">
+                                </div>
+                                <div class="flwins-form-group">
+                                    <label for="state" class="flwins-form-label">State</label>
+                                    <select id="state" name="state" class="flwins-form-select">
+                                        <option value="">Select State</option>
+                                        <option value="FL">Florida</option>
+                                        <option value="AL">Alabama</option>
+                                        <option value="GA">Georgia</option>
+                                    </select>
+                                </div>
+                                <div class="flwins-form-group">
+                                    <label for="zipCode" class="flwins-form-label">ZIP Code</label>
+                                    <input type="text" id="zipCode" name="zipCode" class="flwins-form-input" placeholder="Enter ZIP code">
+                                </div>
+                            </div>
+
+                            <div class="flwins-form-group">
+                                <label for="phone" class="flwins-form-label">Primary Phone Number</label>
+                                <input type="tel" id="phone" name="phone" class="flwins-form-input" placeholder="Enter phone number">
+                            </div>
+
+                            <div class="flwins-form-actions">
+                                <button type="submit" class="flwins-btn flwins-btn-primary">Submit Intake Form</button>
+                                <a href="/profile" class="flwins-btn flwins-btn-secondary">Back to Profile</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="flwins-footer" role="contentinfo">
+        <div class="flwins-container">
+            <div class="flwins-footer-content">
+                <div class="flwins-footer-section">
+                    <div class="flwins-footer-logo">
+                        <img src="/images/FLWinsLogo.png" alt="FL WINS" width="120" height="60">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/flwins-main.js" defer></script>
+    <script src="/js/profile.js" defer></script>
+</body>
+</html>
