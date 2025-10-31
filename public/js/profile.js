@@ -212,8 +212,14 @@ class ProfileManager {
         }
 
         // Show EFSMOD deep link if available
-        if (data && data.efsmodeInvite && data.efsmodeInvite.deepLink) {
-          this.renderEfmodLink(data.efsmodeInvite.deepLink);
+        if (data && data.efsmodeInvite) {
+          const invite = data.efsmodeInvite;
+          const link = invite.deepLink || invite.loginLink;
+          if (link) {
+            this.renderEfmodLink(link);
+          } else if (invite.error) {
+            this.showError(`EFSMOD link unavailable: ${invite.error}`);
+          }
         }
 
       // Keep the form visible so the link appears under the submit button
