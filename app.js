@@ -62,12 +62,14 @@ app.get('/api/efsmod/config-status', (req, res) => {
   const hasClientSecret = !!(process.env.EFSMOD_CLIENT_SECRET || process.env.B_GRAPH_CLIENT_SECRET);
   const baseUrl = process.env.EFSMOD_BASE_URL || process.env.B_BASE_URL || null;
   const redirectPath = process.env.EFSMOD_REDIRECT_PATH || null;
+  const normalizedBaseUrl = baseUrl && (baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`);
   res.json({
     EFSMOD_TENANT_ID: hasTenantId,
     EFSMOD_CLIENT_ID: hasClientId,
     EFSMOD_CLIENT_SECRET: hasClientSecret,
     EFSMOD_BASE_URL: !!baseUrl,
     resolvedBaseUrl: baseUrl,
+    normalizedBaseUrl,
     EFSMOD_REDIRECT_PATH: !!redirectPath,
     resolvedRedirectPath: redirectPath
   });

@@ -5,6 +5,36 @@ const querystring = require('querystring');
 
 const fetch = globalThis.fetch || ((...args) => import('node-fetch').then(({ default: fetchFn }) => fetchFn(...args)));
 
+function normalizeBaseUrl(url) {
+  if (typeof url !== 'string' || !url.trim()) return null;
+  let u = url.trim();
+  if (!/^https?:\/\//i.test(u)) {
+    u = `https://${u}`; // default to https
+  }
+  // remove trailing slash
+  u = u.replace(/\/$/, '');
+  try {
+    const parsed = new URL(u);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+    return parsed.toString().replace(/\/$/, '');
+  } catch (_) {
+    return null;
+  }
+}
+
+function resolveRedirectUrl(baseUrl, redirectPath) {
+  // If a full URL is passed in EFSMOD_REDIRECT_PATH, honor it
+  if (redirectPath && /^https?:\/\//i.test(redirectPath)) {
+    return redirectPath;
+  }
+  const normalizedBase = normalizeBaseUrl(baseUrl);
+  if (!normalizedBase) {
+    throw new Error('EFSMOD_BASE_URL is invalid. Include scheme, e.g., https://your-app.azurewebsites.net');
+  }
+  const path = redirectPath ? (redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`) : '/';
+  return `${normalizedBase}${path}`;
+}
+
 function getEfmodConfig() {
   const tenantId = process.env.EFSMOD_TENANT_ID || process.env.B_TENANT_ID;
   const clientId = process.env.EFSMOD_CLIENT_ID || process.env.B_GRAPH_CLIENT_ID;
@@ -65,11 +95,13 @@ async function inviteExternalUserToEfmod(intake) {
     throw new Error('EFSMOD invite requires a valid email address.');
   }
 
+  const redirectUrl = resolveRedirectUrl(baseUrl, redirectPath);
+
   const payload = {
     invitedUserEmailAddress: email,
     invitedUserDisplayName: makeDisplayName(intake),
     sendInvitationMessage: false,
-    inviteRedirectUrl: `${baseUrl}${redirectPath.startsWith('/') ? '' : '/'}${redirectPath}`
+    inviteRedirectUrl: redirectUrl
   };
 
   const resp = await fetch('https://graph.microsoft.com/v1.0/invitations', {
@@ -91,8 +123,9 @@ async function inviteExternalUserToEfmod(intake) {
   const json = await resp.json();
   // Prefer Graph-provided redeem link (ensures invite acceptance),
   // fallback to front-channel login link with redirect to the desired path
-  const postLogin = encodeURIComponent(`${redirectPath.startsWith('/') ? '' : '/'}${redirectPath}`);
-  const loginLink = `${baseUrl}/.auth/login/aad?post_login_redirect_uri=${postLogin}&login_hint=${encodeURIComponent(email)}`;
+  const postLogin = encodeURIComponent(`${redirectPath && redirectPath.startsWith('/') ? '' : '/'}${redirectPath || '/'}`);
+  const normalizedBase = normalizeBaseUrl(baseUrl) || baseUrl;
+  const loginLink = `${normalizedBase}/.auth/login/aad?post_login_redirect_uri=${postLogin}&login_hint=${encodeURIComponent(email)}`;
   const deepLink = json.inviteRedeemUrl || loginLink;
 
   return {
