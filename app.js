@@ -317,9 +317,7 @@ app.post('/api/intake', express.json(), async (req, res) => {
   try {
     const { principal, baseProfile } = await fetchProfileData(req, { includeGraph: false });
 
-    if (!process.env.SQL_SERVER && !process.env.SQL_CONNECTION_STRING) {
-      return res.status(500).json({ error: 'SQL Database configuration missing on server.' });
-    }
+    const hasSql = !!(process.env.SQL_SERVER || process.env.SQL_CONNECTION_STRING);
 
     const body = req.body || {};
     const sanitize = (value, maxLength = 4000) => {
@@ -331,27 +329,31 @@ app.post('/api/intake', express.json(), async (req, res) => {
 
     const firstName = sanitize(body.firstName, 150) || baseProfile.firstName;
     const lastName = sanitize(body.lastName, 150) || baseProfile.lastName;
-    const email = baseProfile.email || sanitize(body.email, 256);
+    const email = sanitize(body.email, 256) || baseProfile.email;
 
     if (!email) {
       return res.status(400).json({ error: 'Email is required.' });
     }
 
-    await upsertIntakeForm({
-      userId: principal.user_id,
-      email,
-      firstName,
-      lastName,
-      department: sanitize(body.department, 150),
-      jobTitle: sanitize(body.jobTitle, 150),
-      officeLocation: sanitize(body.officeLocation, 150),
-      workPhone: sanitize(body.workPhone, 50),
-      address: sanitize(body.address, 500),
-      city: sanitize(body.city, 150),
-      state: sanitize(body.state, 50),
-      zipCode: sanitize(body.zipCode, 20),
-      phone: sanitize(body.phone, 50)
-    });
+    if (hasSql) {
+      await upsertIntakeForm({
+        userId: principal.user_id,
+        email,
+        firstName,
+        lastName,
+        department: sanitize(body.department, 150),
+        jobTitle: sanitize(body.jobTitle, 150),
+        officeLocation: sanitize(body.officeLocation, 150),
+        workPhone: sanitize(body.workPhone, 50),
+        address: sanitize(body.address, 500),
+        city: sanitize(body.city, 150),
+        state: sanitize(body.state, 50),
+        zipCode: sanitize(body.zipCode, 20),
+        phone: sanitize(body.phone, 50)
+      });
+    } else {
+      console.warn('SQL not configured; skipping intake persistence.');
+    }
 
     // Attempt Microsoft Graph account creation using client credentials
     // This is best-effort and won't fail the intake save if Graph fails.
