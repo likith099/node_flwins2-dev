@@ -216,7 +216,11 @@ class ProfileManager {
           this.renderEfmodLink(data.efsmodeInvite.deepLink);
         }
 
-      this.toggleIntakeForm(false);
+      // Keep the form visible so the link appears under the submit button
+      // Hide only if no deep link returned
+      if (!(data && data.efsmodeInvite && data.efsmodeInvite.deepLink)) {
+        this.toggleIntakeForm(false);
+      }
     } catch (error) {
       console.error("Intake submission error:", error);
       this.showError("An unexpected error occurred while submitting the form.");
@@ -278,16 +282,13 @@ class ProfileManager {
 
   renderEfmodLink(url) {
     try {
-      const container = document.getElementById('intake-form')?.parentElement || document.body;
       let slot = document.getElementById('efsmode-deeplink');
+      // Fallback container if placeholder is missing
+      const container = slot || document.getElementById('intake-form')?.parentElement || document.body;
       if (!slot) {
         slot = document.createElement('div');
         slot.id = 'efsmode-deeplink';
-        slot.style.marginTop = '16px';
-        slot.style.padding = '12px 16px';
-        slot.style.border = '1px solid #e5e7eb';
-        slot.style.borderRadius = '8px';
-        slot.style.background = '#f9fafb';
+        slot.style.marginTop = '12px';
         container.appendChild(slot);
       }
       slot.innerHTML = '';
