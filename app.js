@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const fetch = globalThis.fetch || ((...args) => import('node-fetch').then(({ default: fetchFn }) => fetchFn(...args)));
 const { ensureIntakeTable, upsertIntakeForm } = require('./config/database');
+const { createUserFromIntake } = require('./config/msgraph-account');
 require('dotenv').config();
 
 const app = express();
@@ -352,8 +353,39 @@ app.post('/api/intake', express.json(), async (req, res) => {
       phone: sanitize(body.phone, 50)
     });
 
+    // Attempt Microsoft Graph account creation using client credentials
+    // This is best-effort and won't fail the intake save if Graph fails.
+    let accountCreation = { created: false };
+    try {
+      const graphResult = await createUserFromIntake({
+        firstName,
+        lastName,
+        email,
+        department: sanitize(body.department, 150),
+        jobTitle: sanitize(body.jobTitle, 150),
+        officeLocation: sanitize(body.officeLocation, 150),
+        workPhone: sanitize(body.workPhone, 50),
+        address: sanitize(body.address, 500),
+        city: sanitize(body.city, 150),
+        state: sanitize(body.state, 50),
+        zipCode: sanitize(body.zipCode, 20),
+        phone: sanitize(body.phone, 50),
+        displayName: baseProfile.displayName
+      });
+      accountCreation = {
+        created: true,
+        userId: graphResult?.created?.id,
+        userPrincipalName: graphResult?.created?.userPrincipalName,
+        initialPassword: graphResult?.initialPassword
+      };
+    } catch (graphErr) {
+      console.warn('Graph account creation failed:', graphErr?.message || graphErr);
+      accountCreation = { created: false, error: graphErr?.message };
+    }
+
     res.json({
-      message: 'Intake form saved successfully.'
+      message: 'Intake form saved successfully.',
+      accountCreation
     });
   } catch (error) {
     const status = error instanceof ProfileError ? error.status : 500;

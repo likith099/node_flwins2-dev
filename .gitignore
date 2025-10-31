@@ -98,4 +98,4 @@ Thumbs.db
 *.swo
 
 # Azure specific
-.azure/
+.azure//config/client-variables
