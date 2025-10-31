@@ -194,15 +194,27 @@ class ProfileManager {
       const data = await response.json().catch(() => ({}));
       this.showSuccess("Intake form submitted successfully.");
 
-      // Surface Graph account creation result if available
-      if (data && data.accountCreation) {
-        if (data.accountCreation.created) {
-          const upn = data.accountCreation.userPrincipalName || "user";
-          this.showSuccess(`Account created in Entra ID: ${upn}`);
-        } else if (data.accountCreation.error) {
-          this.showError(`Account creation failed: ${data.accountCreation.error}`);
+        // Surface Graph account creation result if available
+        if (data && data.accountCreation) {
+          const ac = data.accountCreation;
+          if (ac.created) {
+            const upn = ac.userPrincipalName || "user";
+            this.showSuccess(`Account created in Entra ID: ${upn}`);
+          } else if (ac.invited) {
+            const email = ac.invitedEmail || "user";
+            this.showSuccess(`Invitation sent to: ${email}`);
+            if (ac.inviteRedeemUrl) {
+              this.showSuccess(`Redeem link: ${ac.inviteRedeemUrl}`);
+            }
+          } else if (ac.error) {
+            this.showError(`Account creation failed: ${ac.error}`);
+          }
         }
-      }
+
+        // Show EFSMOD deep link if available
+        if (data && data.efsmodeInvite && data.efsmodeInvite.deepLink) {
+          this.renderEfmodLink(data.efsmodeInvite.deepLink);
+        }
 
       this.toggleIntakeForm(false);
     } catch (error) {
@@ -262,6 +274,38 @@ class ProfileManager {
         notification.remove();
       }, 300);
     }, 5000);
+  }
+
+  renderEfmodLink(url) {
+    try {
+      const container = document.getElementById('intake-form')?.parentElement || document.body;
+      let slot = document.getElementById('efsmode-deeplink');
+      if (!slot) {
+        slot = document.createElement('div');
+        slot.id = 'efsmode-deeplink';
+        slot.style.marginTop = '16px';
+        slot.style.padding = '12px 16px';
+        slot.style.border = '1px solid #e5e7eb';
+        slot.style.borderRadius = '8px';
+        slot.style.background = '#f9fafb';
+        container.appendChild(slot);
+      }
+      slot.innerHTML = '';
+      const title = document.createElement('div');
+      title.textContent = 'Continue in EFSMOD:';
+      title.style.fontWeight = '600';
+      title.style.marginBottom = '8px';
+      const a = document.createElement('a');
+      a.href = url;
+      a.textContent = 'Open School Readiness Form in EFSMOD';
+      a.rel = 'noopener noreferrer';
+      a.target = '_blank';
+      a.style.color = '#2563eb';
+      slot.appendChild(title);
+      slot.appendChild(a);
+    } catch (e) {
+      console.warn('Failed to render EFSMOD link:', e);
+    }
   }
 }
 

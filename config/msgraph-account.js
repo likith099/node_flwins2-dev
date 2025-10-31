@@ -110,14 +110,41 @@ function generateInitialPassword() {
   return base.split('').sort(() => 0.5 - Math.random()).join('').slice(0, 20);
 }
 
+let __defaultVerifiedDomain = null;
+
+async function fetchDefaultVerifiedDomain(token) {
+  if (__defaultVerifiedDomain) return __defaultVerifiedDomain;
+  const resp = await fetch('https://graph.microsoft.com/v1.0/organization?$select=verifiedDomains', {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '');
+    throw new Error(`Failed to read tenant domains (${resp.status}): ${text}`);
+  }
+  const json = await resp.json();
+  const org = Array.isArray(json.value) ? json.value[0] : null;
+  const domains = org?.verifiedDomains || [];
+  // Prefer default, then initial, then any verified
+  const preferred = domains.find(d => d.isDefault) || domains.find(d => d.isInitial) || domains.find(d => d.isVerified);
+  if (!preferred || !preferred.name) {
+    throw new Error('No verified domains found in tenant.');
+  }
+  __defaultVerifiedDomain = preferred.name;
+  return __defaultVerifiedDomain;
+}
+
 async function createUserFromIntake(intake, options = {}) {
   const token = await getAppToken();
-  const upnDomain = options.upnDomain || process.env.UPN_DOMAIN || null;
+  let upnDomain = options.upnDomain || process.env.UPN_DOMAIN || null;
 
   const firstName = (intake.firstName || '').trim();
   const lastName = (intake.lastName || '').trim();
   const displayName = [firstName, lastName].filter(Boolean).join(' ') || intake.displayName || 'New User';
   const mailNickname = makeMailNickname({ firstName, lastName, email: intake.email });
+  const email = (intake.email || '').trim();
+  if (!upnDomain) {
+    upnDomain = await fetchDefaultVerifiedDomain(token);
+  }
 
   let userPrincipalName = pickUpn(intake, upnDomain);
   if (!userPrincipalName) {
@@ -141,6 +168,7 @@ async function createUserFromIntake(intake, options = {}) {
     officeLocation: intake.officeLocation || undefined,
     mobilePhone: intake.phone || undefined,
     businessPhones: intake.workPhone ? [String(intake.workPhone)] : undefined,
+    otherMails: (email && email.toLowerCase() !== userPrincipalName.toLowerCase()) ? [String(email)] : undefined,
     streetAddress: intake.address || undefined,
     city: intake.city || undefined,
     state: intake.state || undefined,

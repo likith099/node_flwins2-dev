@@ -3,7 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const fetch = globalThis.fetch || ((...args) => import('node-fetch').then(({ default: fetchFn }) => fetchFn(...args)));
 const { ensureIntakeTable, upsertIntakeForm } = require('./config/database');
-const { createUserFromIntake } = require('./config/msgraph-account');
+const { inviteExternalUserToEfmod } = require('./config/efsmod-provision');
 require('dotenv').config();
 
 const app = express();
@@ -355,39 +355,24 @@ app.post('/api/intake', express.json(), async (req, res) => {
       console.warn('SQL not configured; skipping intake persistence.');
     }
 
-    // Attempt Microsoft Graph account creation using client credentials
-    // This is best-effort and won't fail the intake save if Graph fails.
-    let accountCreation = { created: false };
+    // Invite user into EFSMOD tenant (Tenant B). Best-effort; failure will not break intake save.
+    let efsmodeInvite = null;
     try {
-      const graphResult = await createUserFromIntake({
+      efsmodeInvite = await inviteExternalUserToEfmod({
         firstName,
         lastName,
         email,
         department: sanitize(body.department, 150),
-        jobTitle: sanitize(body.jobTitle, 150),
-        officeLocation: sanitize(body.officeLocation, 150),
-        workPhone: sanitize(body.workPhone, 50),
-        address: sanitize(body.address, 500),
-        city: sanitize(body.city, 150),
-        state: sanitize(body.state, 50),
-        zipCode: sanitize(body.zipCode, 20),
-        phone: sanitize(body.phone, 50),
-        displayName: baseProfile.displayName
+        jobTitle: sanitize(body.jobTitle, 150)
       });
-      accountCreation = {
-        created: true,
-        userId: graphResult?.created?.id,
-        userPrincipalName: graphResult?.created?.userPrincipalName,
-        initialPassword: graphResult?.initialPassword
-      };
-    } catch (graphErr) {
-      console.warn('Graph account creation failed:', graphErr?.message || graphErr);
-      accountCreation = { created: false, error: graphErr?.message };
+    } catch (efmodErr) {
+      console.warn('EFSMOD invite failed:', efmodErr?.message || efmodErr);
+      efsmodeInvite = { error: efmodErr?.message };
     }
 
     res.json({
       message: 'Intake form saved successfully.',
-      accountCreation
+      efsmodeInvite
     });
   } catch (error) {
     const status = error instanceof ProfileError ? error.status : 500;
