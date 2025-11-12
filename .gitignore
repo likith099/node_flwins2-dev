@@ -1,3 +1,5 @@
+# Ignore EFSMOD project folder (folder name contains a comma and space)
+/EFSMOD, project/
 # Logs
 logs
 *.log
@@ -99,3 +101,5 @@ Thumbs.db
 
 # Azure specific
 .azure//config/client-variables
+
+EFSMOD, project/
