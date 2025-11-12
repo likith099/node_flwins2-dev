@@ -204,12 +204,9 @@ class ProfileManager {
       const data = await response.json().catch(() => ({}));
       this.showSuccess("Intake form submitted successfully.");
 
-      // Build EFSMOD Easy Auth link for the FLWINS IdP and redirect to /srapp.html after auth
-      const efsmodBase =
-        "https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net";
-      const efsmodDeepLink = `${efsmodBase}/.auth/login/FLWINS?post_login_redirect_uri=${encodeURIComponent(
-        "/srapp.html"
-      )}`;
+      // Use the exact EFSMOD deep link provided (absolute URL)
+      const efsmodDeepLink =
+        "https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net/.auth/login/FLWINS?post_login_redirect_uri=/srapp.html";
       // Replace loader with the final link
       this.clearEfmodSlot();
       this.renderEfmodLink(efsmodDeepLink);

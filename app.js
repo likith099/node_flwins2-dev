@@ -88,12 +88,12 @@ app.get("/api/efsmod/config-status", (req, res) => {
 // Authentication routes
 app.get("/signin", (req, res) => {
   // Redirect to FLWINS provider and then to SR app page
-  res.redirect("/.auth/login/FLWINS?post_login_redirect_uri=%2Fsrapp.html");
+    res.redirect('https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net/.auth/login/FLWINS?post_login_redirect_uri=/srapp.html');
 });
 
 app.get("/create-account", (req, res) => {
   // Redirect to FLWINS provider and then to SR app page
-  res.redirect("/.auth/login/FLWINS?post_login_redirect_uri=%2Fsrapp.html");
+    res.redirect('https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net/.auth/login/FLWINS?post_login_redirect_uri=/srapp.html');
 });
 
 app.get("/signout", (req, res) => {
