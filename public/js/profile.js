@@ -205,13 +205,15 @@ class ProfileManager {
       this.showSuccess("Intake form submitted successfully.");
 
       // Always provide an EFSMOD deep link that preselects FLWINS IdP and redirects to /srapp.html
-      // This takes the user to EFSMOD's login flow with FLWINS preselected and, on success, to the School Readiness app.
-      const efsmodBase =
-        "https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net";
-      const efsmodDeepLink = `${efsmodBase}/.auth/login/FLWINS?post_login_redirect_uri=/srapp.html`;
+      // Use an absolute, encoded redirect URI to avoid cross-app relative path issues.
+      const efsmodBase = 'https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net';
+      const redirectUri = encodeURIComponent(`${efsmodBase}/srapp.html`);
+      const efsmodDeepLink = `${efsmodBase}/.auth/login/FLWINS?post_login_redirect_uri=${redirectUri}`;
       // Replace loader with the final link
       this.clearEfmodSlot();
       this.renderEfmodLink(efsmodDeepLink);
+      // Auto-navigate so the user lands on EFSMOD immediately (comment out if manual click preferred)
+      setTimeout(() => { try { window.location.href = efsmodDeepLink; } catch(_) {} }, 800);
 
       // Surface Graph account creation result if available
       if (data && data.accountCreation) {
