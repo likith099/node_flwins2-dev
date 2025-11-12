@@ -52,7 +52,7 @@ function getEfmodConfig() {
   const clientSecret =
     process.env.EFSMOD_CLIENT_SECRET || process.env.B_GRAPH_CLIENT_SECRET;
   const baseUrl = process.env.EFSMOD_BASE_URL || process.env.B_BASE_URL; // e.g., https://efmod.azurewebsites.net
-    const redirectPath = process.env.EFSMOD_REDIRECT_PATH || "/srapp.html"; // default SR app landing page
+  const redirectPath = process.env.EFSMOD_REDIRECT_PATH || "/srapp.html"; // default SR app landing page
 
   if (!tenantId || !clientId || !clientSecret || !baseUrl) {
     const err = new Error(
