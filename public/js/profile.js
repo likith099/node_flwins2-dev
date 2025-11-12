@@ -204,29 +204,12 @@ class ProfileManager {
       const data = await response.json().catch(() => ({}));
       this.showSuccess("Intake form submitted successfully.");
 
-      // Always provide an EFSMOD deep link that uses EFSMOD CIAM authorize endpoint and redirects back to
-      // EFSMOD Easy Auth callback, which then forwards to /srapp.html via state=redir=/srapp.html.
+      // Build EFSMOD Easy Auth link for the FLWINS IdP and redirect to /srapp.html after auth
       const efsmodBase =
         "https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net";
-      const ciamBase = "https://efsmoddev.ciamlogin.com";
-      const efTenantId = "a4b91259-0be5-4baa-b3f9-11d07cd913e8";
-      const efClientId = "f2b62959-157c-4b41-a666-e473118a1e77";
-      const callbackUrl = `${efsmodBase}/.auth/login/aad/callback`;
-      const state = encodeURIComponent("redir=/srapp.html");
-      const nonce = `nonce_${Math.random()
-        .toString(36)
-        .slice(2)}_${Date.now()}`;
-      const params = new URLSearchParams({
-        response_type: "code id_token",
-        redirect_uri: callbackUrl,
-        client_id: efClientId,
-        scope: "openid profile email",
-        response_mode: "form_post",
-        state,
-        nonce,
-        domain_hint: "organizations",
-      });
-      const efsmodDeepLink = `${ciamBase}/${efTenantId}/oauth2/v2.0/authorize?${params.toString()}`;
+      const efsmodDeepLink = `${efsmodBase}/.auth/login/FLWINS?post_login_redirect_uri=${encodeURIComponent(
+        "/srapp.html"
+      )}`;
       // Replace loader with the final link
       this.clearEfmodSlot();
       this.renderEfmodLink(efsmodDeepLink);
