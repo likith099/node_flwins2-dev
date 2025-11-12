@@ -18,6 +18,12 @@ class ProfileManager {
     this.init();
   }
 
+  // Returns the single, canonical EFSMOD deep link for SR app
+  getEfsmodeDeepLink() {
+    // Canonical EFSMOD deep link (URL-encoded redirect path variant)
+    return "https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net/.auth/login/FLWINS?post_login_redirect_uri=%2Fsrapp.html";
+  }
+
   async init() {
     await this.loadUserProfile();
     this.setupEventHandlers();
@@ -204,12 +210,9 @@ class ProfileManager {
       const data = await response.json().catch(() => ({}));
       this.showSuccess("Intake form submitted successfully.");
 
-      // Use the exact EFSMOD deep link provided (absolute URL)
-      const efsmodDeepLink =
-        "https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net/.auth/login/FLWINS?post_login_redirect_uri=/srapp.html";
-      // Replace loader with the final link
+      // Replace loader with the final link (computed internally)
       this.clearEfmodSlot();
-      this.renderEfmodLink(efsmodDeepLink);
+      this.renderEfmodLink();
       // Do not auto-navigate; the user must click the link to proceed to EFSMOD.
 
       // Surface Graph account creation result if available
@@ -229,16 +232,7 @@ class ProfileManager {
         }
       }
 
-      // Show EFSMOD deep link if available
-      if (data && data.efsmodeInvite) {
-        const invite = data.efsmodeInvite;
-        const link = invite.deepLink || invite.loginLink;
-        if (link) {
-          this.renderEfmodLink(link);
-        } else if (invite.error) {
-          this.showError(`EFSMOD link unavailable: ${invite.error}`);
-        }
-      }
+      // Intentionally ignore any EFSMOD links from the server; always use the canonical link above
 
       // Keep the form visible so the link appears under the submit button.
       // Since we always render the EFSMOD link above, do not auto-hide here.
@@ -308,7 +302,7 @@ class ProfileManager {
     }, 5000);
   }
 
-  renderEfmodLink(url) {
+  renderEfmodLink() {
     try {
       let slot = document.getElementById("efsmode-deeplink");
       // Fallback container if placeholder is missing
@@ -328,7 +322,7 @@ class ProfileManager {
       title.style.fontWeight = "600";
       title.style.marginBottom = "8px";
       const a = document.createElement("a");
-      a.href = url;
+      a.href = this.getEfsmodeDeepLink();
       a.textContent = "Open School Readiness Form in EFSMOD";
       a.rel = "noopener noreferrer";
       a.target = "_blank";
