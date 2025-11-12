@@ -165,6 +165,14 @@ class ProfileManager {
       return;
     }
 
+    // Disable submit to prevent duplicates and show loader in EFSMOD slot
+    const submitBtn = this.form.querySelector('button[type="submit"], .flwins-btn-primary');
+    const prevDisabled = submitBtn ? submitBtn.disabled : false;
+    if (submitBtn) {
+      submitBtn.disabled = true;
+    }
+    this.renderEfmodLoading('Preparing your EFSMOD link...');
+
     const formData = new FormData(this.form);
     const payload = {};
 
@@ -194,6 +202,14 @@ class ProfileManager {
       const data = await response.json().catch(() => ({}));
       this.showSuccess("Intake form submitted successfully.");
 
+        // Always provide an EFSMOD deep link that preselects FLWINS IdP and redirects to /srapp.html
+        // This takes the user to EFSMOD's login flow with FLWINS preselected and, on success, to the School Readiness app.
+        const efsmodBase = 'https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net';
+        const efsmodDeepLink = `${efsmodBase}/.auth/login/FLWINS?post_login_redirect_uri=/srapp.html`;
+        // Replace loader with the final link
+        this.clearEfmodSlot();
+        this.renderEfmodLink(efsmodDeepLink);
+
         // Surface Graph account creation result if available
         if (data && data.accountCreation) {
           const ac = data.accountCreation;
@@ -222,14 +238,18 @@ class ProfileManager {
           }
         }
 
-      // Keep the form visible so the link appears under the submit button
-      // Hide only if no deep link returned
-      if (!(data && data.efsmodeInvite && data.efsmodeInvite.deepLink)) {
-        this.toggleIntakeForm(false);
-      }
+      // Keep the form visible so the link appears under the submit button.
+      // Since we always render the EFSMOD link above, do not auto-hide here.
     } catch (error) {
       console.error("Intake submission error:", error);
       this.showError("An unexpected error occurred while submitting the form.");
+      // Clear loader on error
+      this.clearEfmodSlot();
+    }
+
+    // Re-enable submit button
+    if (submitBtn) {
+      submitBtn.disabled = prevDisabled;
     }
   }
 
@@ -313,6 +333,52 @@ class ProfileManager {
     } catch (e) {
       console.warn('Failed to render EFSMOD link:', e);
     }
+  }
+
+  clearEfmodSlot() {
+    const slot = document.getElementById('efsmode-deeplink');
+    if (slot) {
+      slot.innerHTML = '';
+    }
+  }
+
+  ensureSpinnerStyles() {
+    if (document.getElementById('flwins-spinner-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'flwins-spinner-styles';
+    style.textContent = `
+      @keyframes flwins-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      .flwins-spinner { width: 18px; height: 18px; border: 3px solid rgba(0,0,0,0.1); border-top-color: #2563eb; border-radius: 50%; animation: flwins-spin 0.9s linear infinite; display: inline-block; margin-right: 8px; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  renderEfmodLoading(text = 'Loading...') {
+    this.ensureSpinnerStyles();
+    let slot = document.getElementById('efsmode-deeplink');
+    const container = slot || document.getElementById('intake-form')?.parentElement || document.body;
+    if (!slot) {
+      slot = document.createElement('div');
+      slot.id = 'efsmode-deeplink';
+      slot.style.marginTop = '12px';
+      container.appendChild(slot);
+    }
+    slot.innerHTML = '';
+    const wrapper = document.createElement('div');
+    wrapper.setAttribute('role', 'status');
+    wrapper.setAttribute('aria-live', 'polite');
+    wrapper.style.display = 'inline-flex';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.gap = '8px';
+
+    const spinner = document.createElement('span');
+    spinner.className = 'flwins-spinner';
+    const label = document.createElement('span');
+    label.textContent = text;
+
+    wrapper.appendChild(spinner);
+    wrapper.appendChild(label);
+    slot.appendChild(wrapper);
   }
 }
 
