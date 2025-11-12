@@ -206,14 +206,14 @@ class ProfileManager {
 
       // Always provide an EFSMOD deep link that preselects FLWINS IdP and redirects to /srapp.html
       // Use an absolute, encoded redirect URI to avoid cross-app relative path issues.
-      const efsmodBase = 'https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net';
+      const efsmodBase =
+        "https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net";
       const redirectUri = encodeURIComponent(`${efsmodBase}/srapp.html`);
-      const efsmodDeepLink = `${efsmodBase}/.auth/login/FLWINS?post_login_redirect_uri=${redirectUri}`;
+      const efsmodDeepLink = `${efsmodBase}/.auth/login/aad?post_login_redirect_uri=${redirectUri}`;
       // Replace loader with the final link
       this.clearEfmodSlot();
       this.renderEfmodLink(efsmodDeepLink);
-      // Auto-navigate so the user lands on EFSMOD immediately (comment out if manual click preferred)
-      setTimeout(() => { try { window.location.href = efsmodDeepLink; } catch(_) {} }, 800);
+      // Do not auto-navigate; the user must click the link to proceed to EFSMOD.
 
       // Surface Graph account creation result if available
       if (data && data.accountCreation) {
