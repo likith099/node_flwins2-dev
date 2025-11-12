@@ -77,13 +77,13 @@ app.get('/api/efsmod/config-status', (req, res) => {
 
 // Authentication routes
 app.get('/signin', (req, res) => {
-  // Redirect to Azure AD login
-  res.redirect('/.auth/login/aad');
+  // Redirect to FLWINS provider and then to SR app page
+  res.redirect('/.auth/login/FLWINS?post_login_redirect_uri=%2Fsrapp.html');
 });
 
 app.get('/create-account', (req, res) => {
-  // Redirect to Azure AD login (same as sign in for Azure AD)
-  res.redirect('/.auth/login/aad');
+  // Redirect to FLWINS provider and then to SR app page
+  res.redirect('/.auth/login/FLWINS?post_login_redirect_uri=%2Fsrapp.html');
 });
 
 app.get('/signout', (req, res) => {

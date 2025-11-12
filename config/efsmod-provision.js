@@ -125,7 +125,8 @@ async function inviteExternalUserToEfmod(intake) {
   // fallback to front-channel login link with redirect to the desired path
   const postLogin = encodeURIComponent(`${redirectPath && redirectPath.startsWith('/') ? '' : '/'}${redirectPath || '/'}`);
   const normalizedBase = normalizeBaseUrl(baseUrl) || baseUrl;
-  const loginLink = `${normalizedBase}/.auth/login/aad?post_login_redirect_uri=${postLogin}&login_hint=${encodeURIComponent(email)}`;
+  // Force FLWINS IdP and avoid login_hint (which may push users to Microsoft Account)
+  const loginLink = `${normalizedBase}/.auth/login/FLWINS?post_login_redirect_uri=${postLogin}`;
   const deepLink = json.inviteRedeemUrl || loginLink;
 
   return {
