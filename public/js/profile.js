@@ -166,12 +166,14 @@ class ProfileManager {
     }
 
     // Disable submit to prevent duplicates and show loader in EFSMOD slot
-    const submitBtn = this.form.querySelector('button[type="submit"], .flwins-btn-primary');
+    const submitBtn = this.form.querySelector(
+      'button[type="submit"], .flwins-btn-primary'
+    );
     const prevDisabled = submitBtn ? submitBtn.disabled : false;
     if (submitBtn) {
       submitBtn.disabled = true;
     }
-    this.renderEfmodLoading('Preparing your EFSMOD link...');
+    this.renderEfmodLoading("Preparing your EFSMOD link...");
 
     const formData = new FormData(this.form);
     const payload = {};
@@ -202,41 +204,42 @@ class ProfileManager {
       const data = await response.json().catch(() => ({}));
       this.showSuccess("Intake form submitted successfully.");
 
-        // Always provide an EFSMOD deep link that preselects FLWINS IdP and redirects to /srapp.html
-        // This takes the user to EFSMOD's login flow with FLWINS preselected and, on success, to the School Readiness app.
-        const efsmodBase = 'https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net';
-        const efsmodDeepLink = `${efsmodBase}/.auth/login/FLWINS?post_login_redirect_uri=/srapp.html`;
-        // Replace loader with the final link
-        this.clearEfmodSlot();
-        this.renderEfmodLink(efsmodDeepLink);
+      // Always provide an EFSMOD deep link that preselects FLWINS IdP and redirects to /srapp.html
+      // This takes the user to EFSMOD's login flow with FLWINS preselected and, on success, to the School Readiness app.
+      const efsmodBase =
+        "https://efsmod2-dev-f4dsd9ffbegededq.canadacentral-01.azurewebsites.net";
+      const efsmodDeepLink = `${efsmodBase}/.auth/login/FLWINS?post_login_redirect_uri=/srapp.html`;
+      // Replace loader with the final link
+      this.clearEfmodSlot();
+      this.renderEfmodLink(efsmodDeepLink);
 
-        // Surface Graph account creation result if available
-        if (data && data.accountCreation) {
-          const ac = data.accountCreation;
-          if (ac.created) {
-            const upn = ac.userPrincipalName || "user";
-            this.showSuccess(`Account created in Entra ID: ${upn}`);
-          } else if (ac.invited) {
-            const email = ac.invitedEmail || "user";
-            this.showSuccess(`Invitation sent to: ${email}`);
-            if (ac.inviteRedeemUrl) {
-              this.showSuccess(`Redeem link: ${ac.inviteRedeemUrl}`);
-            }
-          } else if (ac.error) {
-            this.showError(`Account creation failed: ${ac.error}`);
+      // Surface Graph account creation result if available
+      if (data && data.accountCreation) {
+        const ac = data.accountCreation;
+        if (ac.created) {
+          const upn = ac.userPrincipalName || "user";
+          this.showSuccess(`Account created in Entra ID: ${upn}`);
+        } else if (ac.invited) {
+          const email = ac.invitedEmail || "user";
+          this.showSuccess(`Invitation sent to: ${email}`);
+          if (ac.inviteRedeemUrl) {
+            this.showSuccess(`Redeem link: ${ac.inviteRedeemUrl}`);
           }
+        } else if (ac.error) {
+          this.showError(`Account creation failed: ${ac.error}`);
         }
+      }
 
-        // Show EFSMOD deep link if available
-        if (data && data.efsmodeInvite) {
-          const invite = data.efsmodeInvite;
-          const link = invite.deepLink || invite.loginLink;
-          if (link) {
-            this.renderEfmodLink(link);
-          } else if (invite.error) {
-            this.showError(`EFSMOD link unavailable: ${invite.error}`);
-          }
+      // Show EFSMOD deep link if available
+      if (data && data.efsmodeInvite) {
+        const invite = data.efsmodeInvite;
+        const link = invite.deepLink || invite.loginLink;
+        if (link) {
+          this.renderEfmodLink(link);
+        } else if (invite.error) {
+          this.showError(`EFSMOD link unavailable: ${invite.error}`);
         }
+      }
 
       // Keep the form visible so the link appears under the submit button.
       // Since we always render the EFSMOD link above, do not auto-hide here.
@@ -308,44 +311,47 @@ class ProfileManager {
 
   renderEfmodLink(url) {
     try {
-      let slot = document.getElementById('efsmode-deeplink');
+      let slot = document.getElementById("efsmode-deeplink");
       // Fallback container if placeholder is missing
-      const container = slot || document.getElementById('intake-form')?.parentElement || document.body;
+      const container =
+        slot ||
+        document.getElementById("intake-form")?.parentElement ||
+        document.body;
       if (!slot) {
-        slot = document.createElement('div');
-        slot.id = 'efsmode-deeplink';
-        slot.style.marginTop = '12px';
+        slot = document.createElement("div");
+        slot.id = "efsmode-deeplink";
+        slot.style.marginTop = "12px";
         container.appendChild(slot);
       }
-      slot.innerHTML = '';
-      const title = document.createElement('div');
-      title.textContent = 'Continue in EFSMOD:';
-      title.style.fontWeight = '600';
-      title.style.marginBottom = '8px';
-      const a = document.createElement('a');
+      slot.innerHTML = "";
+      const title = document.createElement("div");
+      title.textContent = "Continue in EFSMOD:";
+      title.style.fontWeight = "600";
+      title.style.marginBottom = "8px";
+      const a = document.createElement("a");
       a.href = url;
-      a.textContent = 'Open School Readiness Form in EFSMOD';
-      a.rel = 'noopener noreferrer';
-      a.target = '_blank';
-      a.style.color = '#2563eb';
+      a.textContent = "Open School Readiness Form in EFSMOD";
+      a.rel = "noopener noreferrer";
+      a.target = "_blank";
+      a.style.color = "#2563eb";
       slot.appendChild(title);
       slot.appendChild(a);
     } catch (e) {
-      console.warn('Failed to render EFSMOD link:', e);
+      console.warn("Failed to render EFSMOD link:", e);
     }
   }
 
   clearEfmodSlot() {
-    const slot = document.getElementById('efsmode-deeplink');
+    const slot = document.getElementById("efsmode-deeplink");
     if (slot) {
-      slot.innerHTML = '';
+      slot.innerHTML = "";
     }
   }
 
   ensureSpinnerStyles() {
-    if (document.getElementById('flwins-spinner-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'flwins-spinner-styles';
+    if (document.getElementById("flwins-spinner-styles")) return;
+    const style = document.createElement("style");
+    style.id = "flwins-spinner-styles";
     style.textContent = `
       @keyframes flwins-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       .flwins-spinner { width: 18px; height: 18px; border: 3px solid rgba(0,0,0,0.1); border-top-color: #2563eb; border-radius: 50%; animation: flwins-spin 0.9s linear infinite; display: inline-block; margin-right: 8px; }
@@ -353,27 +359,30 @@ class ProfileManager {
     document.head.appendChild(style);
   }
 
-  renderEfmodLoading(text = 'Loading...') {
+  renderEfmodLoading(text = "Loading...") {
     this.ensureSpinnerStyles();
-    let slot = document.getElementById('efsmode-deeplink');
-    const container = slot || document.getElementById('intake-form')?.parentElement || document.body;
+    let slot = document.getElementById("efsmode-deeplink");
+    const container =
+      slot ||
+      document.getElementById("intake-form")?.parentElement ||
+      document.body;
     if (!slot) {
-      slot = document.createElement('div');
-      slot.id = 'efsmode-deeplink';
-      slot.style.marginTop = '12px';
+      slot = document.createElement("div");
+      slot.id = "efsmode-deeplink";
+      slot.style.marginTop = "12px";
       container.appendChild(slot);
     }
-    slot.innerHTML = '';
-    const wrapper = document.createElement('div');
-    wrapper.setAttribute('role', 'status');
-    wrapper.setAttribute('aria-live', 'polite');
-    wrapper.style.display = 'inline-flex';
-    wrapper.style.alignItems = 'center';
-    wrapper.style.gap = '8px';
+    slot.innerHTML = "";
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("role", "status");
+    wrapper.setAttribute("aria-live", "polite");
+    wrapper.style.display = "inline-flex";
+    wrapper.style.alignItems = "center";
+    wrapper.style.gap = "8px";
 
-    const spinner = document.createElement('span');
-    spinner.className = 'flwins-spinner';
-    const label = document.createElement('span');
+    const spinner = document.createElement("span");
+    spinner.className = "flwins-spinner";
+    const label = document.createElement("span");
     label.textContent = text;
 
     wrapper.appendChild(spinner);
